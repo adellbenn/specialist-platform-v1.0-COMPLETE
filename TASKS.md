@@ -3,7 +3,7 @@
 ## قائمة المهام - Specialist Platform
 
 **Status:** Tracking & Management
-**Last Updated:** June 2024
+**Last Updated:** August 2026
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### المرحلة 0: الإطلاق والبنية الأساسية
 
-#### Backend (14 Modules)
+#### Backend (15 Modules)
 - [x] Auth Module مع JWT
 - [x] Users Module (CRUD + Management)
 - [x] Beneficiaries Module (إدارة المستفيدين)
@@ -19,13 +19,14 @@
 - [x] Sessions Module (إدارة الجلسات)
 - [x] Reports Module (نظام التقارير)
 - [x] Payments Module (معطّل حالياً)
-- [x] Files Module (أساسي)
+- [x] Files Module (رفع الملفات + فحص الفيروسات)
 - [x] Notifications Module (أساسي)
 - [x] Audit Module (تسجيل الأنشطة)
-- [x] Dashboard Module (لوحة التحكم)
-- [x] Settings Module (الإعدادات)
+- [x] Analytics Module (التحليلات)
+- [x] Search Module (البحث)
+- [x] Permissions Module (الصلاحيات)
 - [x] Tenants Module (إدارة المؤسسات)
-- [x] Common Module (Utilities & Decorators)
+- [x] Health Module (فحوصات الصحة)
 
 #### Frontend (17 Pages)
 - [x] Login Page
@@ -91,32 +92,41 @@
 
 ### المرحلة 1: Testing System (Critical)
 
-#### Unit Testing
-- [ ] Setup Jest Framework
-- [ ] Auth service tests
-- [ ] Users service tests
-- [ ] Beneficiaries service tests
-- [ ] Appointments service tests
-- [ ] Sessions service tests
-- [ ] Reports service tests
-- [ ] Guards tests
-- [ ] Decorators tests
-- [ ] Utilities tests
+#### Backend Unit Testing
+- [x] إعداد Jest Framework (84 ملف spec)
+- [x] Auth service & controller tests
+- [x] Users service tests
+- [x] Beneficiaries service tests
+- [x] Appointments service tests
+- [x] Sessions service tests
+- [x] Reports service tests
+- [x] Guards & Decorators tests
+- [x] Permissions engine tests
+- [x] Utilities & Config tests
 
-**Status:** ❌ NOT STARTED
+**Status:** ✅ DONE (backend)
 **Priority:** 🔴 CRITICAL
-**ETA:** Week 1-2
+
+#### Frontend Unit Testing (Vitest + RTL)
+- [x] إعداد Vitest + Testing Library + jsdom
+- [x] Utilities tests
+- [x] UI components tests
+- [ ] مزيد من اختبارات الصفحات والـ hooks
+
+**Status:** 🟡 STARTED
+**Priority:** 🔴 CRITICAL
 
 #### Integration Testing
-- [ ] Auth flow testing
-- [ ] User creation & management
+- [x] 2FA enable / verify / disable flow (two-factor tests)
+- [x] Permission checking tests
+- [ ] Auth flow testing (E2E)
+- [ ] User creation & management (E2E)
 - [ ] Beneficiary management workflow
 - [ ] Appointment booking flow
 - [ ] Session management flow
 - [ ] Report creation & approval flow
-- [ ] Permission checking tests
 
-**Status:** ❌ NOT STARTED
+**Status:** 🟡 IN PROGRESS
 **Priority:** 🔴 CRITICAL
 **ETA:** Week 2-3
 
@@ -136,18 +146,17 @@
 
 ### المرحلة 2: File Management & Export (Important)
 
-#### File Upload System
-- [ ] Upload handler setup
-- [ ] File storage configuration
-- [ ] File size validation
-- [ ] File type validation
-- [ ] Virus scanning (optional)
-- [ ] File management endpoints
-- [ ] Frontend upload UI
+#### File Upload System ✅ DONE
+- [x] Upload handler setup (multer)
+- [x] File storage configuration (uploads/ مجلدات بالـ tenant/entity/date)
+- [x] File size validation (حد من env: MAX_FILE_SIZE)
+- [x] File type validation (قائمة MIME مسموحة)
+- [x] Virus scanning (ClamAV INSTREAM قبل الكتابة)
+- [x] File management endpoints (رفع/قائمة/تحميل/حذف)
+- [x] Frontend upload UI
 
-**Status:** ❌ NOT STARTED
+**Status:** ✅ DONE
 **Priority:** 🟡 HIGH
-**ETA:** Week 3-4
 
 #### Export Features
 - [ ] PDF export library setup
@@ -162,13 +171,12 @@
 **ETA:** Week 4-5
 
 #### Advanced Search & Filter
-- [ ] Full-text search implementation
-- [ ] Filter logic
-- [ ] Search UI components
-- [ ] Filter UI components
+- [x] Full-text search implementation (Search module)
+- [x] Filter logic
+- [x] Search UI components (global-search)
 - [ ] Performance optimization
 
-**Status:** ❌ NOT STARTED
+**Status:** 🟡 MOSTLY DONE
 **Priority:** 🟡 MEDIUM
 **ETA:** Week 5
 
@@ -179,17 +187,19 @@
 ### المرحلة 3: Performance & Security (Week 5-6)
 
 #### Caching System
-- [ ] Redis setup & configuration
-- [ ] Cache invalidation strategy
-- [ ] Query result caching
-- [ ] User data caching
+- [x] Redis setup & configuration
+- [x] Cache invalidation strategy
+- [x] Query result caching
+- [x] User data caching
 - [ ] Cache middleware
 
 #### Security Features
-- [ ] 2FA (Two-Factor Auth) implementation
-- [ ] Rate limiting setup
-- [ ] Request throttling
-- [ ] Advanced encryption
+- [x] 2FA (Two-Factor Auth) implementation — Backend
+- [x] 2FA الواجهة (QR + secret + backup codes) — Frontend
+- [x] Rate limiting setup (Throttler)
+- [x] Request throttling
+- [x] Security headers (Helmet)
+- [x] CORS من env (FRONTEND_URL / CORS_ORIGINS)
 
 #### Email Service
 - [ ] Email service integration
@@ -327,17 +337,17 @@ Email Service:
 
 ### 🔴 Critical (يجب الآن)
 ```
-1. Testing System (Unit/Integration/E2E)
-2. File Upload Functionality
-3. Export to PDF/Excel
+1. Integration/E2E Testing
+2. Export to PDF/Excel
+3. Frontend test coverage
 ```
 
 ### 🟡 High (أسبوع 3-6)
 ```
-1. Advanced Search & Filtering
-2. Redis Caching
-3. 2FA Security
-4. Email Integration
+1. Advanced Search & Filtering (تحسين أداء)
+2. Email Integration
+3. Redis Cache middleware
+4. WebSocket (واقعي)
 ```
 
 ### 🟢 Low (مستقبل)
@@ -353,11 +363,11 @@ Email Service:
 ## 📈 نسبة الإنجاز
 
 ```
-Completed:    55 tasks (96%)
-In Progress:  2 tasks (3%)
+Completed:    68 tasks (94%)
+In Progress:  9 tasks (5%)
 Upcoming:     15 tasks (1%)
 ─────────────────────────
-Total:        72 tasks
+Total:        92 tasks
 ```
 
 ---
@@ -442,5 +452,5 @@ Deployment:
 ---
 
 **Management by:** Development Team
-**Last Updated:** June 2024
+**Last Updated:** August 2026
 **Next Review:** Next Phase

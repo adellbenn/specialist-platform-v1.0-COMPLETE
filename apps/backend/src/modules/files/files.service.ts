@@ -37,8 +37,11 @@ export class FilesService {
     private virusScanner: VirusScannerService,
   ) {
     this.uploadDir = this.configService.get<string>('storage.localPath') ?? './uploads';
+    const maxFileSize = this.configService.get<number>('storage.maxFileSize');
     this.maxFileSize =
-      this.configService.get<number>('storage.maxFileSize') ?? DEFAULT_MAX_FILE_SIZE;
+      typeof maxFileSize === 'number' && maxFileSize > 0
+        ? maxFileSize
+        : DEFAULT_MAX_FILE_SIZE;
     this.ensureUploadDir();
   }
 

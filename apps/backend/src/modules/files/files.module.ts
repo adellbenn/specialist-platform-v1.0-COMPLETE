@@ -10,7 +10,7 @@ import { VirusScannerService } from '@common/security/virus-scanner.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([FileAttachment]),
-    MulterModule.forRootAsync({
+    MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
