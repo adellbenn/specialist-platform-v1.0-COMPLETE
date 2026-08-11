@@ -1,0 +1,76 @@
+version: '3.9'
+
+services:
+  # ═══════════════════════════════
+  # قاعدة البيانات
+  # ═══════════════════════════════
+  postgres:
+    image: postgres:16-alpine
+    container_name: specialist_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: specialist_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strongpassword123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - specialist_network
+
+  # ═══════════════════════════════
+  # Backend
+  # ═══════════════════════════════
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../infrastructure/docker/Dockerfile.backend
+    container_name: specialist_backend
+    restart: unless-stopped
+    env_file: ./apps/backend/.env
+    environment:
+      DB_HOST: postgres
+      NODE_ENV: development
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/backend/src:/app/src   # Hot reload في التطوير
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - specialist_network
+
+  # ═══════════════════════════════
+  # Frontend
+  # ═══════════════════════════════
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+    container_name: specialist_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - specialist_network
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  specialist_network:
+    driver: bridge

@@ -1,0 +1,55 @@
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  // Output standalone للـ Docker
+  output: 'standalone',
+
+  // تعطيل ESLint في وقت البناء (مؤقتاً)
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+
+  // تعطيل TypeScript errors في البناء
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
+  // إعادة توجيه طلبات API للـ Backend
+  async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiUrl}/:path*`,
+      },
+    ];
+  },
+
+  // CORS Headers
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+    ];
+  },
+
+  // Images من أي مصدر
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'http',  hostname: 'localhost' },
+      { protocol: 'http',  hostname: '192.168.*' },
+    ],
+  },
+
+  // تحسين الأداء
+  compress: true,
+  poweredByHeader: false,
+};
+
+export default nextConfig;

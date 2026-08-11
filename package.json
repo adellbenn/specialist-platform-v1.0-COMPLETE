@@ -1,0 +1,35 @@
+{
+  "name": "specialist-platform",
+  "version": "1.0.0",
+  "description": "منصة إدارة أدوار الأخصائيين",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev:backend": "cd apps/backend  && npm run start:dev",
+    "dev:frontend": "cd apps/frontend && npm run dev",
+    "build:backend": "cd apps/backend  && npm run build",
+    "build:frontend": "cd apps/frontend && npm run build",
+    "lint": "cd apps/backend && npm run lint && cd ../frontend && npm run lint",
+    "format": "cd apps/backend && npm run format && cd ../frontend && npm run format",
+    "format:check": "cd apps/backend && npm run format:check && cd ../frontend && npm run format:check",
+    "test": "cd apps/backend && npm run test",
+    "test:cov": "cd apps/backend && npm run test:cov",
+    "audit": "cd apps/backend && npm audit --audit-level=high && cd ../frontend && npm audit --audit-level=high",
+    "install:all": "cd apps/backend && npm install && cd ../frontend && npm install",
+    "docker:dev": "docker-compose up -d",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:down": "docker-compose down",
+    "backup": "docker-compose -f docker-compose.prod.yml --profile backup run --rm backup"
+  },
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "next-themes": "^0.3.0"
+  }
+}

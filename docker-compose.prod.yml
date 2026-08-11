@@ -1,0 +1,159 @@
+version: '3.9'
+
+# ════════════════════════════════════════════════════════
+# بيئة الإنتاج — يتطلب ملف .env.production
+# تشغيل: docker-compose -f docker-compose.prod.yml up -d
+# ════════════════════════════════════════════════════════
+
+services:
+  # ─── قاعدة البيانات ───────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: specialist_db_prod
+    restart: always
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+    # لا يُكشف خارجياً في الإنتاج
+    expose:
+      - "5432"
+
+  # ─── Redis (للإشعارات والـ Cache مستقبلاً) ────────────
+  redis:
+    image: redis:7-alpine
+    container_name: specialist_redis_prod
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal
+    expose:
+      - "6379"
+
+  # ─── Backend ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../infrastructure/docker/Dockerfile.backend
+      target: production
+    container_name: specialist_backend_prod
+    restart: always
+    env_file: .env.production
+    environment:
+      NODE_ENV:   production
+      DB_HOST:    postgres
+      REDIS_HOST: redis
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    expose:
+      - "3001"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # ─── Frontend ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      target: production
+    container_name: specialist_frontend_prod
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
+    depends_on:
+      - backend
+    networks:
+      - internal
+    expose:
+      - "3000"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ─── Nginx (Reverse Proxy + SSL) ──────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: specialist_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/ssl:/etc/nginx/ssl:ro
+      - uploads_data:/var/www/uploads:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - internal
+      - external
+
+  # ─── Backup Service ───────────────────────────────────
+  backup:
+    image: postgres:16-alpine
+    container_name: specialist_backup
+    restart: "no"
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - backups_data:/backups
+      - ./infrastructure/scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      - postgres
+    networks:
+      - internal
+    profiles:
+      - backup
+
+# ─── Volumes ────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  backups_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ─── Networks ────────────────────────────────────────────
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  external:
+    driver: bridge

@@ -1,0 +1,108 @@
+/* ===== Shimmer Loading Effect ===== */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-secondary) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ===== Ripple Effect ===== */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.2) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.ripple:active::after {
+  opacity: 1;
+}
+
+/* ===== Gradient Text ===== */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, #A89FD9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Blob Decorations ===== */
+.blob-purple {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, #A89FD9 100%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blob-pink {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E80B83 0%, #FFB4D9 100%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Dots Pattern ===== */
+.dots-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Stripes Pattern ===== */
+.stripes-pattern {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    var(--surface) 10px,
+    var(--surface) 11px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Gradient Divider ===== */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary) 0%, transparent 100%);
+}
+
+/* ===== RTL-safe decorative classes ===== */
+[dir="rtl"] .deco-flip {
+  transform: scaleX(-1);
+}
+
+[dir="ltr"] .deco-flip {
+  transform: scaleX(1);
+}
