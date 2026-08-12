@@ -168,6 +168,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ strict: {} })
   @Patch('change-password')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()

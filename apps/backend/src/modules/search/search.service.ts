@@ -75,6 +75,12 @@ export class SearchService {
       qb.andWhere('b.assigned_specialist_id = :sid', { sid: requestingUser.id });
     }
 
+    // المستفيد يبحث في ملفه الشخصي فقط
+    if (requestingUser.role === UserRole.BENEFICIARY) {
+      if (!requestingUser.beneficiaryId) return [];
+      qb.andWhere('b.id = :bid', { bid: requestingUser.beneficiaryId });
+    }
+
     const items = await qb.getMany();
 
     return items.map((b) => ({
@@ -106,6 +112,12 @@ export class SearchService {
 
     if (requestingUser.role === UserRole.SPECIALIST) {
       qb.andWhere('a.specialist_id = :sid', { sid: requestingUser.id });
+    }
+
+    // المستفيد يرى مواعيده فقط
+    if (requestingUser.role === UserRole.BENEFICIARY) {
+      if (!requestingUser.beneficiaryId) return [];
+      qb.andWhere('a.beneficiary_id = :bid', { bid: requestingUser.beneficiaryId });
     }
 
     const items = await qb.getMany();
@@ -145,6 +157,8 @@ export class SearchService {
       qb.andWhere('r.specialist_id = :sid', { sid: requestingUser.id });
     }
     if (requestingUser.role === UserRole.BENEFICIARY) {
+      if (!requestingUser.beneficiaryId) return [];
+      qb.andWhere('r.beneficiary_id = :bid', { bid: requestingUser.beneficiaryId });
       qb.andWhere('r.shared_with_beneficiary = true');
     }
 

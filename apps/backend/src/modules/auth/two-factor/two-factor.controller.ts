@@ -16,6 +16,7 @@ export class TwoFactorController {
   constructor(private readonly twoFactorService: TwoFactorService) {}
 
   @Post('generate')
+  @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate 2FA secret + QR code URL' })
@@ -25,6 +26,7 @@ export class TwoFactorController {
   }
 
   @Post('verify')
+  @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
@@ -35,6 +37,7 @@ export class TwoFactorController {
   }
 
   @Post('disable')
+  @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)

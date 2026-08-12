@@ -8,9 +8,11 @@ import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 
 export default function AuditPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

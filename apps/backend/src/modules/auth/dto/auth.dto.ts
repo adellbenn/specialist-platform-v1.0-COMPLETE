@@ -53,8 +53,8 @@ export class ResetPasswordDto {
 
   @ApiProperty({ example: 'NewPass@123', description: 'كلمة المرور الجديدة' })
   @IsString()
-  @MinLength(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' })
-  @IsNotEmpty({ message: 'كلمة المرور مطلوبة' })
+  @MinLength(8, { message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' })
+  @IsNotEmpty({ message: 'كلمة المرور الجديدة مطلوبة' })
   password: string;
 }
 
@@ -64,9 +64,9 @@ export class ChangePasswordDto {
   @IsNotEmpty({ message: 'كلمة المرور الحالية مطلوبة' })
   currentPassword: string;
 
-  @ApiProperty({ example: 'NewPass@456', description: 'كلمة المرور الجديدة' })
+  @ApiProperty({ example: 'NewPass@123', description: 'كلمة المرور الجديدة' })
   @IsString()
-  @MinLength(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' })
+  @MinLength(8, { message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' })
   @IsNotEmpty({ message: 'كلمة المرور الجديدة مطلوبة' })
   newPassword: string;
 }

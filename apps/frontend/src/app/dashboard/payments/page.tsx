@@ -13,6 +13,7 @@ import { SubscriptionCard }    from '@/components/payments/subscription-card';
 import { PageLoader }          from '@/components/ui/spinner';
 import { EmptyState }          from '@/components/ui/empty-state';
 import { PermissionGate }      from '@/components/auth/permission-gate';
+import { useRouteGuard }       from '@/components/auth/route-guard';
 import { Card, SectionHeader } from '@/components/ui/card';
 import {
   Invoice, Subscription, PaymentStats, ServicePackage,
@@ -23,6 +24,7 @@ import { formatCurrency, cn }  from '@/lib/utils';
 type TabId = 'invoices' | 'subscriptions' | 'packages';
 
 export default function PaymentsPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const router  = useRouter();
   const [tab, setTab]             = useState<TabId>('invoices');
   const [stats, setStats]         = useState<PaymentStats | null>(null);

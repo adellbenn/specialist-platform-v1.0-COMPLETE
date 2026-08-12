@@ -295,8 +295,29 @@ describe('SearchService', () => {
       await service.searchBeneficiaries('test', tenantId, beneficiaryUser, 5);
       // Beneficiary has role BENEFICIARY, no specialist filter applied
       const qb = beneficiaryRepo.createQueryBuilder.mock.results[0].value;
-      // The specialist filter should NOT be applied for beneficiary role
       expect(qb.andWhere).not.toHaveBeenCalledWith('b.assigned_specialist_id = :sid', expect.anything());
+      // ...but is restricted to their own beneficiary record
+      expect(qb.andWhere).toHaveBeenCalledWith('b.id = :bid', { bid: 'ben-1' });
+    });
+
+    it('should return empty when beneficiary has no linked record', async () => {
+      const orphan = { ...beneficiaryUser, beneficiaryId: null } as unknown as User;
+      beneficiaryRepo.createQueryBuilder.mockReturnValue(makeQb([]));
+
+      const result = await service.searchBeneficiaries('test', tenantId, orphan, 5);
+      expect(result).toEqual([]);
+      expect(beneficiaryRepo.createQueryBuilder).toHaveBeenCalled();
+    });
+
+    it('should restrict beneficiary appointment search to own records', async () => {
+      beneficiaryRepo.createQueryBuilder.mockReturnValue(makeQb([]));
+      appointmentRepo.createQueryBuilder.mockReturnValue(makeQb([]));
+      reportRepo.createQueryBuilder.mockReturnValue(makeQb([]));
+      invoiceRepo.createQueryBuilder.mockReturnValue(makeQb([]));
+
+      await service.search('Ahmed', tenantId, beneficiaryUser);
+      const qb = appointmentRepo.createQueryBuilder.mock.results[0].value;
+      expect(qb.andWhere).toHaveBeenCalledWith('a.beneficiary_id = :bid', { bid: 'ben-1' });
     });
   });
 });

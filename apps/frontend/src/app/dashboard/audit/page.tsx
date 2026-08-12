@@ -46,7 +46,7 @@ const ENTITY_LABELS: Record<string, string> = {
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'EXPORT', 'APPROVE', 'SUBMIT'];
 
 export default function AuditLogPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'supervisor'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
 
   const [logs, setLogs]         = useState<AuditLogEntry[]>([]);
   const [loading, setLoading]   = useState(true);

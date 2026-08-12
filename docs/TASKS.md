@@ -98,22 +98,52 @@
 - [ ] كتابة IMPLEMENTATION_GUIDE.md ⏳ **قيد الإنجاز**
 
 ### تعطيل دور Accountant
-- [ ] تحديث role-permissions.ts
-- [ ] إضافة flag isDisabled
-- [ ] تحديث Frontend Navigation
-- [ ] التحديث في Backend Guards
-- [ ] اختبار الدور المعطّل
+- [x] تحديث role-permissions.ts
+- [x] إضافة آلية تعطيل الأدوار (DISABLED_ROLES)
+- [x] التحديث في Backend Guards
+- [x] اختبار الدور المعطّل
+
+---
+
+## 🔒 مراجعة الأمان الشاملة (Security Audit) — تمت
+
+### الوصول والحماية من جهة الخادم
+- [x] حماية هرم الأدوار (ROLE_RANK): منع رفع/إدارة/حذف أدوار أعلى من المستدعي
+- [x] رفض `roleId` غير مطابق لدور الـ DTO عند إنشاء المستخدم
+- [x] قيود الأخصائي: إدارة الحالات/التقارير/المشاركة ضمن `assignedSpecialistId` فقط
+- [x] منع RECEPTIONIST/ACCOUNTANT من مشاركة التقارير
+- [x] BENEFICIARY في البحث يقتصر على ملفه الذاتي (`b.id = :bid`)
+- [x] CORS موحّد من إعداد واحد (`app.corsOrigins`)
+- [x] حجم الملف مصدره واحد: `storage.maxFileSize` (multer + service)
+- [x] Rate limiting: توليد/تحقق/تعطيل 2FA + تغيير كلمة المرور
+- [x] كودات النسخ الاحتياطي تُوزَّن بـ JSON.parse داخل try/catch
+
+### الواجهة الأمامية
+- [x] تنزيل الملفات عبر Blob مع Bearer token (إزالة الرابط المكشوف)
+- [x] Route guards لكل صفحات `/dashboard/admin/*` + audit/analytics
+- [x] مواءمة قائمة التنقل مع الصلاحيات (settings لكل الموظفين، إزالة accountant المحروم)
+- [x] Attributes آمنة للـ Cookies (sameSite: lax, path, secure في الإنتاج)
+- [x] تثبيت exhaustive-deps عبر 17 موقعاً
+- [x] ربط الألوان بعائلة `--primary-*` (فاتح + داكن)
+
+### الاختبارات والتحقق
+- [x] اختبارات وحدة للقيود الجديدة (users/search/reports/beneficiaries)
+- [x] `tsc --noEmit` نظيف (backend + frontend)
+- [x] `next lint` بلا أخطاء
+- [x] Backend Jest: **1117/1117** اختبار ناجح
+- [x] Frontend Vitest: **13/13** اختبار ناجح
+- [x] `next build` + `nest build` بلا أخطاء
 
 ---
 
 ## 📋 المهام القادمة (Upcoming)
 
 ### اختبار شامل (QA Testing)
-- [ ] اختبار وحدات (Unit Tests)
-  - [ ] Backend Controllers
-  - [ ] Backend Services
-  - [ ] Frontend Components
-  - [ ] Permissions Guards
+- [x] اختبار وحدات (Unit Tests)
+  - [x] Backend Controllers
+  - [x] Backend Services
+  - [x] Frontend Components
+  - [x] Permissions Guards
 
 - [ ] اختبار التكامل (Integration Tests)
   - [ ] API Endpoints

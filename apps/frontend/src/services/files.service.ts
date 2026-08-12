@@ -34,8 +34,9 @@ export const filesService = {
       `${BASE}?entityType=${entityType}&entityId=${entityId}`,
     ),
 
-  /** رابط تحميل مباشر */
-  getDownloadUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL ?? '/api/v1'}${BASE}/${id}/download`,
+  /** تحميل مباشر (بتفويض عبر الـ Bearer token) */
+  download: (id: string) =>
+    apiClient.get<Blob>(`${BASE}/${id}/download`, { responseType: 'blob' }),
 
   /** حذف ملف */
   delete: (id: string) =>

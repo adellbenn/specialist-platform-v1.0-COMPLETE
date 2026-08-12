@@ -139,8 +139,12 @@ export class ReportsController {
   @AllStaff()
   @RequirePermissions(Permission.REPORT_UPDATE)
   @ApiOperation({ summary: 'مشاركة/إلغاء مشاركة التقرير مع المستفيد' })
-  async toggleShare(@Param('id') id: string, @TenantId() tenantId: string) {
-    const result = await this.service.toggleShare(id, tenantId);
+  async toggleShare(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.toggleShare(id, tenantId, user);
     const msg = result.sharedWithBeneficiary
       ? 'تم مشاركة التقرير مع المستفيد'
       : 'تم إلغاء المشاركة';

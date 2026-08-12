@@ -6,9 +6,11 @@ import { ArrowRight, Key, Check, X as XIcon, Search, SlidersHorizontal, CheckSqu
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 
 export default function RoleDetailPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const { id } = useParams();
   const router = useRouter();
   const [role, setRole] = useState<any>(null);

@@ -35,8 +35,9 @@ export const useAuthStore = create<AuthState>()(
           const { accessToken, refreshToken, user } = data.data;
 
           // حفظ التوكنات في Cookies
-          Cookies.set('accessToken', accessToken, { expires: 1 });
-          Cookies.set('refreshToken', refreshToken, { expires: 7 });
+          const secure = process.env.NODE_ENV === 'production';
+          Cookies.set('accessToken', accessToken, { expires: 1, sameSite: 'lax', secure, path: '/' });
+          Cookies.set('refreshToken', refreshToken, { expires: 7, sameSite: 'lax', secure, path: '/' });
 
           set({ user, isAuthenticated: true });
         } finally {
@@ -45,8 +46,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
+        Cookies.remove('accessToken', { path: '/' });
+        Cookies.remove('refreshToken', { path: '/' });
         set({ user: null, isAuthenticated: false });
         apiClient.post('/auth/logout').catch(() => {});
       },

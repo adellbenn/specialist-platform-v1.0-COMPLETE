@@ -141,37 +141,37 @@ describe('BeneficiariesController', () => {
   });
 
   describe('assignSpecialist', () => {
-    it('should call service.assignSpecialist', async () => {
+    it('should call service.assignSpecialist with the current user', async () => {
       const dto = { specialistId: 'spec-1' };
       const result = { id: 'ben-1', assignedSpecialistId: 'spec-1' };
       service.assignSpecialist.mockResolvedValue(result);
 
-      const response = await controller.assignSpecialist('ben-1', dto as any, 'tenant-1');
+      const response = await controller.assignSpecialist('ben-1', dto as any, 'tenant-1', mockUser);
 
-      expect(service.assignSpecialist).toHaveBeenCalledWith('ben-1', dto, 'tenant-1');
+      expect(service.assignSpecialist).toHaveBeenCalledWith('ben-1', dto, 'tenant-1', mockUser);
       expect(response).toEqual({ data: result, message: 'تم تعيين الأخصائي بنجاح' });
     });
   });
 
   describe('changeStatus', () => {
-    it('should call service.changeStatus', async () => {
+    it('should call service.changeStatus with the current user', async () => {
       const result = { id: 'ben-1', status: 'inactive' };
       service.changeStatus.mockResolvedValue(result);
 
-      const response = await controller.changeStatus('ben-1', 'inactive' as any, 'tenant-1');
+      const response = await controller.changeStatus('ben-1', 'inactive' as any, 'tenant-1', mockUser);
 
-      expect(service.changeStatus).toHaveBeenCalledWith('ben-1', 'inactive', 'tenant-1');
+      expect(service.changeStatus).toHaveBeenCalledWith('ben-1', 'inactive', 'tenant-1', mockUser);
       expect(response).toEqual({ data: result, message: 'تم تعديل الحالة بنجاح' });
     });
   });
 
   describe('archive', () => {
-    it('should call service.archive', async () => {
+    it('should call service.archive with the current user', async () => {
       service.archive.mockResolvedValue(undefined);
 
-      const response = await controller.archive('ben-1', 'tenant-1');
+      const response = await controller.archive('ben-1', 'tenant-1', mockUser);
 
-      expect(service.archive).toHaveBeenCalledWith('ben-1', 'tenant-1');
+      expect(service.archive).toHaveBeenCalledWith('ben-1', 'tenant-1', mockUser);
       expect(response).toEqual({ message: 'تم أرشفة المستفيد بنجاح' });
     });
   });
@@ -183,7 +183,7 @@ describe('BeneficiariesController', () => {
 
       const response = await controller.getFile('ben-1', 'tenant-1', mockUser, undefined as any);
 
-      expect(service.getFile).toHaveBeenCalledWith('ben-1', 'tenant-1');
+      expect(service.getFile).toHaveBeenCalledWith('ben-1', 'tenant-1', mockUser);
       expect(response).toEqual({ data: file });
     });
 
@@ -195,14 +195,14 @@ describe('BeneficiariesController', () => {
   });
 
   describe('updateFile', () => {
-    it('should call service.updateFile', async () => {
+    it('should call service.updateFile with the current user', async () => {
       const dto = { medicalHistory: 'Updated history' };
       const result = { id: 'bf-1', medicalHistory: 'Updated history' };
       service.updateFile.mockResolvedValue(result);
 
       const response = await controller.updateFile('ben-1', dto as any, 'tenant-1', mockUser);
 
-      expect(service.updateFile).toHaveBeenCalledWith('ben-1', dto, 'tenant-1', 'user-1');
+      expect(service.updateFile).toHaveBeenCalledWith('ben-1', dto, 'tenant-1', 'user-1', mockUser);
       expect(response).toEqual({ data: result, message: 'تم تعديل الملف الإلكتروني بنجاح' });
     });
   });

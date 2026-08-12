@@ -9,6 +9,7 @@ import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge }                 from '@/components/ui/badge';
 import { PageLoader }            from '@/components/ui/spinner';
 import { PermissionGate }        from '@/components/auth/permission-gate';
+import { useRouteGuard }         from '@/components/auth/route-guard';
 import {
   Invoice,
   PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS,
@@ -18,6 +19,7 @@ import { formatDate, formatDateTime, formatCurrency, cn } from '@/lib/utils';
 import { useAuthStore }          from '@/store/auth.store';
 
 export default function InvoiceDetailPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
   const { user } = useAuthStore();

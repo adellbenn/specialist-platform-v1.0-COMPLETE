@@ -18,7 +18,7 @@ interface Beneficiary {
 }
 
 export default function NewInvoicePage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'accountant'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const router = useRouter();
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [loading, setLoading] = useState(true);

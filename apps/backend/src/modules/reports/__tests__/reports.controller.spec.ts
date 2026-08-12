@@ -113,9 +113,9 @@ describe('ReportsController', () => {
       const result = { id: 'rpt-1', sharedWithBeneficiary: true };
       service.toggleShare.mockResolvedValue(result);
 
-      const response = await controller.toggleShare('rpt-1', 'tenant-1');
+      const response = await controller.toggleShare('rpt-1', 'tenant-1', mockUser);
 
-      expect(service.toggleShare).toHaveBeenCalledWith('rpt-1', 'tenant-1');
+      expect(service.toggleShare).toHaveBeenCalledWith('rpt-1', 'tenant-1', mockUser);
       expect(response).toEqual({ data: result, message: 'تم مشاركة التقرير مع المستفيد' });
     });
 
@@ -123,7 +123,7 @@ describe('ReportsController', () => {
       const result = { id: 'rpt-1', sharedWithBeneficiary: false };
       service.toggleShare.mockResolvedValue(result);
 
-      const response = await controller.toggleShare('rpt-1', 'tenant-1');
+      const response = await controller.toggleShare('rpt-1', 'tenant-1', mockUser);
 
       expect(response).toEqual({ data: result, message: 'تم إلغاء المشاركة' });
     });

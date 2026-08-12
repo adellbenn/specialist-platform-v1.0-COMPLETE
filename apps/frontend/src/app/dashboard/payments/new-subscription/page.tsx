@@ -32,7 +32,7 @@ function addDays(date: Date, days: number): string {
 }
 
 export default function NewSubscriptionPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'accountant'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const router = useRouter();
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [packages, setPackages] = useState<ServicePackage[]>([]);

@@ -9,9 +9,12 @@ import { adminService } from '@/services/admin.service';
 import { usersService } from '@/services/users.service';
 import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 
 export default function AdminUsersPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
+
   const [users, setUsers] = useState<any[]>([]);
   const [permissions, setPermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +83,12 @@ export default function AdminUsersPage() {
 
   if (loading) return <PageLoader />;
 
+  const selectedUserName = selectedUser
+    ? `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() ||
+      selectedUser.email ||
+      'مستخدم'
+    : '';
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2">
@@ -133,7 +142,7 @@ export default function AdminUsersPage() {
           <div className="relative w-full max-w-lg h-full overflow-y-auto shadow-2xl p-6" style={{ backgroundColor: 'var(--background)' }}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-                صلاحيات: {selectedUser.name}
+                صلاحيات: {selectedUserName}
               </h3>
               <button onClick={() => setViewPerms(false)} className="p-1.5 rounded-lg hover:bg-[var(--surface)]">
                 <X size={18} />

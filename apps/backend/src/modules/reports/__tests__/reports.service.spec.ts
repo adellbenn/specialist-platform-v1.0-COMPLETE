@@ -322,6 +322,36 @@ describe('ReportsService', () => {
         BadRequestException,
       );
     });
+
+    it('should forbid specialist sharing another specialist report', async () => {
+      const report = makeReport({ specialistId: 'other-spec', status: ReportStatus.APPROVED });
+      reportRepo.findOne.mockResolvedValue(report);
+      const specUser = makeUser(UserRole.SPECIALIST);
+
+      await expect(service.toggleShare('rpt-1', tenantId, specUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should forbid receptionist from sharing reports', async () => {
+      const report = makeReport({ status: ReportStatus.APPROVED });
+      reportRepo.findOne.mockResolvedValue(report);
+      const receptionist = makeUser(UserRole.RECEPTIONIST);
+
+      await expect(service.toggleShare('rpt-1', tenantId, receptionist)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should allow specialist owner to share own report', async () => {
+      const report = makeReport({ specialistId: 'spec-1', status: ReportStatus.APPROVED });
+      reportRepo.findOne.mockResolvedValue(report);
+      reportRepo.save.mockResolvedValue(report);
+      const specUser = makeUser(UserRole.SPECIALIST);
+
+      const result = await service.toggleShare('rpt-1', tenantId, specUser);
+      expect(report.sharedWithBeneficiary).toBe(true);
+    });
   });
 
   describe('archive', () => {

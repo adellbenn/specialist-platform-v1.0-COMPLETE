@@ -9,12 +9,14 @@ import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 import { useThemeCustomizer } from '@/store/theme-customizer.store';
 
 const DEFAULT_GROUP_COLOR = useThemeCustomizer.getState().customAccentColor || '#2563EB';
 
 export default function AdminGroupsPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

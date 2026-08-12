@@ -12,6 +12,7 @@ import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/utils';
 import { Role } from '@/types';
@@ -22,6 +23,7 @@ const DEFAULT_ROLE_COLOR = useThemeCustomizer.getState().customAccentColor || '#
 interface RoleItem extends Role {}
 
 export default function AdminRolesPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const router = useRouter();
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [loading, setLoading] = useState(true);

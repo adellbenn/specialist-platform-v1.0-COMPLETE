@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
+import { useRouteGuard } from '@/components/auth/route-guard';
 
 export default function SecurityCenterPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const [stats, setStats] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

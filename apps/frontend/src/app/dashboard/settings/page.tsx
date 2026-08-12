@@ -44,7 +44,7 @@ function Toggle({ enabled, onChange, id }: { enabled: boolean; onChange: (v: boo
 }
 
 export default function SettingsPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'supervisor', 'specialist', 'receptionist'], redirectTo: '/dashboard' });
 
   const { user } = useAuthStore();
 

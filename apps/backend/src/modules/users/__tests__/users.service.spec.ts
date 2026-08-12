@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users.service';
 import { User, UserRole } from '../user.entity';
 import { Role } from '@modules/permissions/role.entity';
@@ -239,8 +239,9 @@ describe('UsersService', () => {
       );
     });
 
-    it('should use provided roleId if given', async () => {
+    it('should use provided roleId if it matches the role', async () => {
       userRepo.findOne.mockResolvedValue(null);
+      roleRepo.findOne.mockResolvedValue({ id: 'explicit-role', name: 'specialist' });
       userRepo.create.mockImplementation((data: any) => data);
       userRepo.save.mockResolvedValue(mockUser());
 
@@ -253,6 +254,31 @@ describe('UsersService', () => {
       expect(userRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ roleId: 'explicit-role' }),
       );
+    });
+
+    it('should reject roleId that does not match the role', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      roleRepo.findOne.mockResolvedValue({ id: 'some-role', name: 'center_manager' });
+
+      await expect(
+        service.create(
+          { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.SPECIALIST, roleId: 'some-role' },
+          UserRole.SPECIALIST,
+          'tenant-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject creating a role higher than the creator', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.CENTER_MANAGER },
+          UserRole.RECEPTIONIST,
+          'tenant-1',
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should hash password via User.hashPassword', async () => {
@@ -437,6 +463,45 @@ describe('UsersService', () => {
 
       expect(roleRepo.findOne).not.toHaveBeenCalled();
     });
+
+    it('should forbid editing a user with higher role', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ role: UserRole.CENTER_MANAGER }));
+      const caller = mockUser({ id: 'receptionist-1', role: UserRole.RECEPTIONIST });
+
+      await expect(
+        service.update('user-1', { firstName: 'X' }, 'tenant-1', caller as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should forbid promoting a user to a higher role than the caller', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ role: UserRole.SPECIALIST }));
+      const caller = mockUser({ id: 'receptionist-1', role: UserRole.RECEPTIONIST });
+
+      await expect(
+        service.update('user-1', { role: UserRole.SUPERVISOR }, 'tenant-1', caller as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should forbid editing a super_admin by non-super-admin', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ role: UserRole.SUPER_ADMIN }));
+      const caller = mockUser({ id: 'manager-1', role: UserRole.CENTER_MANAGER });
+
+      await expect(
+        service.update('user-1', { firstName: 'X' }, 'tenant-1', caller as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow super_admin to promote a user', async () => {
+      const user = mockUser({ role: UserRole.SPECIALIST });
+      userRepo.findOne.mockResolvedValue(user);
+      roleRepo.findOne.mockResolvedValue({ id: 'cm-role' });
+      userRepo.save.mockResolvedValue(user);
+      const caller = mockUser({ id: 'root-1', role: UserRole.SUPER_ADMIN });
+
+      await service.update('user-1', { role: UserRole.CENTER_MANAGER }, 'tenant-1', caller as any);
+
+      expect(user.role).toBe(UserRole.CENTER_MANAGER);
+    });
   });
 
   describe('toggleActive', () => {
@@ -459,6 +524,15 @@ describe('UsersService', () => {
 
       expect(user.isActive).toBe(true);
     });
+
+    it('should forbid toggling a user with higher role', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ role: UserRole.SUPER_ADMIN }));
+      const caller = mockUser({ id: 'manager-1', role: UserRole.CENTER_MANAGER });
+
+      await expect(
+        service.toggleActive('user-1', 'tenant-1', caller as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('remove', () => {
@@ -477,6 +551,15 @@ describe('UsersService', () => {
       userRepo.findOne.mockResolvedValue(null);
 
       await expect(service.remove('user-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should forbid removing a user with higher role', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser({ role: UserRole.SUPERVISOR }));
+      const caller = mockUser({ id: 'spec-1', role: UserRole.SPECIALIST });
+
+      await expect(
+        service.remove('user-1', 'tenant-1', caller as any),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

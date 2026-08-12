@@ -166,8 +166,10 @@ export class BeneficiariesService {
     id: string,
     dto: AssignSpecialistDto,
     tenantId: string,
+    requestingUser?: User,
   ): Promise<Beneficiary> {
     const beneficiary = await this.findOne(id, tenantId);
+    this.assertCanManageBeneficiary(requestingUser, beneficiary);
     await this.validateSpecialistBelongsToTenant(dto.specialistId, tenantId);
 
     beneficiary.assignedSpecialistId = dto.specialistId;
@@ -181,8 +183,10 @@ export class BeneficiariesService {
     id: string,
     status: BeneficiaryStatus,
     tenantId: string,
+    requestingUser?: User,
   ): Promise<Beneficiary> {
     const beneficiary = await this.findOne(id, tenantId);
+    this.assertCanManageBeneficiary(requestingUser, beneficiary);
     beneficiary.status = status;
     await this.beneficiaryRepo.save(beneficiary);
     return this.findOne(id, tenantId);
@@ -190,16 +194,22 @@ export class BeneficiariesService {
 
   // ─── SOFT DELETE (أرشفة) ──────────────────────────────────
 
-  async archive(id: string, tenantId: string): Promise<void> {
+  async archive(id: string, tenantId: string, requestingUser?: User): Promise<void> {
     const beneficiary = await this.findOne(id, tenantId);
+    this.assertCanManageBeneficiary(requestingUser, beneficiary);
     beneficiary.status = BeneficiaryStatus.ARCHIVED;
     await this.beneficiaryRepo.save(beneficiary);
   }
 
   // ─── BENEFICIARY FILE ─────────────────────────────────────
 
-  async getFile(beneficiaryId: string, tenantId: string): Promise<BeneficiaryFile> {
-    await this.findOne(beneficiaryId, tenantId); // التحقق من الوجود
+  async getFile(
+    beneficiaryId: string,
+    tenantId: string,
+    requestingUser?: User,
+  ): Promise<BeneficiaryFile> {
+    const beneficiary = await this.findOne(beneficiaryId, tenantId);
+    this.assertCanManageBeneficiary(requestingUser, beneficiary);
 
     let file = await this.fileRepo.findOne({
       where: { beneficiaryId, tenantId },
@@ -222,8 +232,10 @@ export class BeneficiariesService {
     dto: UpdateBeneficiaryFileDto,
     tenantId: string,
     updatedById: string,
+    requestingUser?: User,
   ): Promise<BeneficiaryFile> {
-    await this.findOne(beneficiaryId, tenantId);
+    const beneficiary = await this.findOne(beneficiaryId, tenantId);
+    this.assertCanManageBeneficiary(requestingUser, beneficiary);
     let file = await this.fileRepo.findOne({ where: { beneficiaryId, tenantId } });
 
     if (!file) {
@@ -280,6 +292,19 @@ export class BeneficiariesService {
     });
     if (!specialist) {
       throw new BadRequestException('الأخصائي غير موجود أو لا ينتمي لهذا المركز');
+    }
+  }
+
+  /**
+   * الأخصائي يدير حالاته فقط — بقية الأدوار (استقبال/إدارة) تدير حالات المركز
+   */
+  private assertCanManageBeneficiary(requestingUser: User | undefined, beneficiary: Beneficiary): void {
+    if (!requestingUser) return;
+    if (
+      requestingUser.role === UserRole.SPECIALIST &&
+      beneficiary.assignedSpecialistId !== requestingUser.id
+    ) {
+      throw new ForbiddenException('لا يمكنك إدارة حالة مستفيد غير مسند إليك');
     }
   }
 }

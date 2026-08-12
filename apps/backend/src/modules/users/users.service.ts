@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +14,17 @@ import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto/user.dto';
 import { PermissionsService } from '@modules/permissions/permissions.service';
 import { Role } from '@modules/permissions/role.entity';
 import * as crypto from 'crypto';
+
+/** ترتيب الأدوار للتحكم في سلسلة الصلاحيات (الأعلى يقدر يدير الأقل أو المساوي) */
+const ROLE_RANK: Record<UserRole, number> = {
+  [UserRole.SUPER_ADMIN]: 5,
+  [UserRole.CENTER_MANAGER]: 4,
+  [UserRole.SUPERVISOR]: 3,
+  [UserRole.ACCOUNTANT]: 3,
+  [UserRole.SPECIALIST]: 2,
+  [UserRole.RECEPTIONIST]: 2,
+  [UserRole.BENEFICIARY]: 1,
+};
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -83,17 +95,21 @@ export class UsersService implements OnModuleInit {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) throw new ConflictException('البريد الإلكتروني مستخدم مسبقاً');
 
-    // Super Admin فقط يمكنه إنشاء Super Admin آخر
-    if (dto.role === UserRole.SUPER_ADMIN && creatorRole !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('لا يمكنك إنشاء مدير عام');
-    }
+    // لا يمكن لأحد إنشاء دور أعلى من دوره
+    this.assertCanAssignRole(creatorRole, dto.role);
 
     // تعيين tenant تلقائياً إذا لم يكن المنشئ super_admin
     const tenantId = creatorRole === UserRole.SUPER_ADMIN ? dto.tenantId : creatorTenantId;
 
     // تعيين roleId تلقائياً حسب الدور
     let roleId = dto.roleId;
-    if (!roleId) {
+    if (roleId) {
+      // منع ربط دور لا يطابق الدور المختار
+      const role = await this.roleRepository.findOne({ where: { id: roleId } });
+      if (!role || role.name !== dto.role) {
+        throw new BadRequestException('الدور المحدد لا يطابق الصلاحية المطلوبة');
+      }
+    } else {
       const role = await this.roleRepository.findOne({ where: { name: dto.role } });
       if (role) roleId = role.id;
     }
@@ -153,8 +169,16 @@ export class UsersService implements OnModuleInit {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto, tenantId?: string): Promise<User> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    tenantId?: string,
+    requestingUser?: User,
+  ): Promise<User> {
     const user = await this.findOne(id, tenantId);
+
+    // لا يمكن تعديل مستخدم أعلى في السلسلة
+    if (requestingUser) this.assertCanManageUser(requestingUser, user);
 
     if (dto.password) {
       user.passwordHash = await User.hashPassword(dto.password);
@@ -166,6 +190,8 @@ export class UsersService implements OnModuleInit {
     }
 
     if (dto.role && dto.role !== user.role) {
+      // لا يمكن رفع/خفض دور لأعلى من دور المستدعي
+      if (requestingUser) this.assertCanAssignRole(requestingUser.role, dto.role);
       user.role = dto.role;
       const role = await this.roleRepository.findOne({ where: { name: dto.role } });
       if (role) user.roleId = role.id;
@@ -176,20 +202,21 @@ export class UsersService implements OnModuleInit {
       ...(dto.lastName && { lastName: dto.lastName }),
       ...(dto.email && { email: dto.email }),
       ...(dto.phone && { phone: dto.phone }),
-      ...(dto.roleId && { roleId: dto.roleId }),
     });
 
     return this.userRepository.save(user);
   }
 
-  async toggleActive(id: string, tenantId?: string): Promise<User> {
+  async toggleActive(id: string, tenantId?: string, requestingUser?: User): Promise<User> {
     const user = await this.findOne(id, tenantId);
+    if (requestingUser) this.assertCanManageUser(requestingUser, user);
     user.isActive = !user.isActive;
     return this.userRepository.save(user);
   }
 
-  async remove(id: string, tenantId?: string): Promise<void> {
+  async remove(id: string, tenantId?: string, requestingUser?: User): Promise<void> {
     const user = await this.findOne(id, tenantId);
+    if (requestingUser) this.assertCanManageUser(requestingUser, user);
     // Soft delete — تعطيل بدلاً من الحذف
     user.isActive = false;
     await this.userRepository.save(user);
@@ -212,5 +239,32 @@ export class UsersService implements OnModuleInit {
     user.preferences = { ...(user.preferences || {}), ...preferences };
     await this.userRepository.save(user);
     return user.preferences;
+  }
+
+  // ─── ROLE HIERARCHY HELPERS ─────────────────────────────────
+
+  /**
+   * هل يمكن للمستدعي تعيين الدور المطلوب؟
+   * يمنع رفع الأدوار خارج سلطة المستدعي (Super Admin فقط يدير Super Admin)
+   */
+  private assertCanAssignRole(callerRole: UserRole, targetRole: UserRole): void {
+    if (targetRole === UserRole.SUPER_ADMIN && callerRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('لا يمكنك منح صلاحية المدير العام');
+    }
+    if (ROLE_RANK[targetRole] > ROLE_RANK[callerRole]) {
+      throw new ForbiddenException('لا يمكنك إدارة مستخدمين بدور أعلى من دورك');
+    }
+  }
+
+  /**
+   * هل يمكن للمستدعي إدارة المستخدم الهدف؟
+   */
+  private assertCanManageUser(caller: User, target: User): void {
+    if (target.role === UserRole.SUPER_ADMIN && caller.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('لا يمكنك إدارة المدير العام');
+    }
+    if (ROLE_RANK[target.role] > ROLE_RANK[caller.role]) {
+      throw new ForbiddenException('لا يمكنك إدارة مستخدمين بدور أعلى من دورك');
+    }
   }
 }

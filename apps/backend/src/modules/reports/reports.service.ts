@@ -101,6 +101,13 @@ export class ReportsService {
       }
     }
 
+    // الأخصائي يصل لتقاريره فقط
+    if (requestingUser?.role === UserRole.SPECIALIST) {
+      if (report.specialistId !== requestingUser.id) {
+        throw new ForbiddenException('لا يمكنك الوصول لتقرير أخصائي آخر');
+      }
+    }
+
     return report;
   }
 
@@ -175,11 +182,25 @@ export class ReportsService {
 
   // ─── SHARE WITH BENEFICIARY ───────────────────────────────
 
-  async toggleShare(id: string, tenantId: string): Promise<Report> {
+  async toggleShare(id: string, tenantId: string, requestingUser?: User): Promise<Report> {
     const report = await this.findOne(id, tenantId);
 
     if (report.status !== ReportStatus.APPROVED) {
       throw new BadRequestException('يمكن مشاركة التقارير الموافق عليها فقط');
+    }
+
+    // الأخصائي يشارك تقاريره فقط — موظف الاستقبال/المحاسب لا يشاركون التقارير
+    if (requestingUser) {
+      if (requestingUser.role === UserRole.SPECIALIST) {
+        if (report.specialistId !== requestingUser.id) {
+          throw new ForbiddenException('لا يمكنك مشاركة تقرير أخصائي آخر');
+        }
+      } else if (
+        requestingUser.role === UserRole.RECEPTIONIST ||
+        requestingUser.role === UserRole.ACCOUNTANT
+      ) {
+        throw new ForbiddenException('لا تملك صلاحية مشاركة التقارير');
+      }
     }
 
     report.sharedWithBeneficiary = !report.sharedWithBeneficiary;

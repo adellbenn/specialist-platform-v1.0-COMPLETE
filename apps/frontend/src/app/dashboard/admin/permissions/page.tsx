@@ -7,9 +7,11 @@ import {
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
 import { PageLoader } from '@/components/ui/spinner';
+import { useRouteGuard } from '@/components/auth/route-guard';
 import { PermissionMatrix } from '@/components/admin/permission-matrix';
 
 export default function AdminPermissionsPage() {
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const [permissions, setPermissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

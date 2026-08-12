@@ -22,7 +22,7 @@ interface ServicePackage {
 }
 
 export default function PackagesPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'accountant'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

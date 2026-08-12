@@ -116,7 +116,12 @@ export class TwoFactorService {
 
     // Try backup codes
     if (user.twoFactorBackupCodes) {
-      const backupCodes: string[] = JSON.parse(user.twoFactorBackupCodes);
+      let backupCodes: string[];
+      try {
+        backupCodes = JSON.parse(user.twoFactorBackupCodes);
+      } catch {
+        backupCodes = [];
+      }
       const codeUpper = code.toUpperCase();
       const index = backupCodes.indexOf(codeUpper);
       if (index !== -1) {
@@ -173,7 +178,11 @@ export class TwoFactorService {
 
     let backupCodesRemaining = 0;
     if (user.twoFactorBackupCodes) {
-      backupCodesRemaining = JSON.parse(user.twoFactorBackupCodes).length;
+      try {
+        backupCodesRemaining = JSON.parse(user.twoFactorBackupCodes).length;
+      } catch {
+        backupCodesRemaining = 0;
+      }
     }
 
     return {

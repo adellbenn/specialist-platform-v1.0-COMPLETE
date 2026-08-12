@@ -51,12 +51,21 @@ export function FilesList({ entityType, entityId, showUpload = true, className }
     }
   };
 
-  const handleDownload = (file: FileAttachment) => {
-    const url = filesService.getDownloadUrl(file.id);
-    const a   = document.createElement('a');
-    a.href    = url;
-    a.download = file.originalName;
-    a.click();
+  const handleDownload = async (file: FileAttachment) => {
+    try {
+      const res = await filesService.download(file.id);
+      const blob = res.data;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.originalName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('فشل تحميل الملف');
+    }
   };
 
   return (

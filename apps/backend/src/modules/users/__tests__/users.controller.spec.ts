@@ -77,9 +77,9 @@ describe('UsersController', () => {
       const updated = { ...mockUser, firstName: 'New' };
       usersService.update.mockResolvedValue(updated);
 
-      const result = await controller.update('user-1', { firstName: 'New' } as any, 'tenant-1');
+      const result = await controller.update('user-1', { firstName: 'New' } as any, 'tenant-1', mockUser);
 
-      expect(usersService.update).toHaveBeenCalledWith('user-1', { firstName: 'New' }, 'tenant-1');
+      expect(usersService.update).toHaveBeenCalledWith('user-1', { firstName: 'New' }, 'tenant-1', mockUser);
       expect(result.data).toEqual(updated);
       expect(result.message).toBeDefined();
     });
@@ -89,16 +89,16 @@ describe('UsersController', () => {
     it('should return activation message when activated', async () => {
       usersService.toggleActive.mockResolvedValue({ ...mockUser, isActive: true });
 
-      const result = await controller.toggleActive('user-1', 'tenant-1');
+      const result = await controller.toggleActive('user-1', 'tenant-1', mockUser);
 
-      expect(usersService.toggleActive).toHaveBeenCalledWith('user-1', 'tenant-1');
+      expect(usersService.toggleActive).toHaveBeenCalledWith('user-1', 'tenant-1', mockUser);
       expect(result.message).toContain('تفعيل');
     });
 
     it('should return deactivation message when deactivated', async () => {
       usersService.toggleActive.mockResolvedValue({ ...mockUser, isActive: false });
 
-      const result = await controller.toggleActive('user-1', 'tenant-1');
+      const result = await controller.toggleActive('user-1', 'tenant-1', mockUser);
 
       expect(result.message).toContain('تعطيل');
     });
@@ -108,9 +108,9 @@ describe('UsersController', () => {
     it('should call usersService.remove', async () => {
       usersService.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove('user-1', 'tenant-1');
+      const result = await controller.remove('user-1', 'tenant-1', mockUser);
 
-      expect(usersService.remove).toHaveBeenCalledWith('user-1', 'tenant-1');
+      expect(usersService.remove).toHaveBeenCalledWith('user-1', 'tenant-1', mockUser);
       expect(result.message).toBeDefined();
     });
   });

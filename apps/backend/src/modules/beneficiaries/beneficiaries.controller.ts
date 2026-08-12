@@ -182,8 +182,9 @@ export class BeneficiariesController {
     @Param('id') id: string,
     @Body() dto: AssignSpecialistDto,
     @TenantId() tenantId: string,
+    @CurrentUser() user: User,
   ) {
-    const result = await this.service.assignSpecialist(id, dto, tenantId);
+    const result = await this.service.assignSpecialist(id, dto, tenantId, user);
     return { data: result, message: 'تم تعيين الأخصائي بنجاح' };
   }
 
@@ -195,8 +196,9 @@ export class BeneficiariesController {
     @Param('id') id: string,
     @Body('status') status: BeneficiaryStatus,
     @TenantId() tenantId: string,
+    @CurrentUser() user: User,
   ) {
-    const result = await this.service.changeStatus(id, status, tenantId);
+    const result = await this.service.changeStatus(id, status, tenantId, user);
     return { data: result, message: 'تم تعديل الحالة بنجاح' };
   }
 
@@ -205,8 +207,12 @@ export class BeneficiariesController {
   @RequirePermissions(Permission.BENEFICIARY_ARCHIVE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'أرشفة مستفيد' })
-  async archive(@Param('id') id: string, @TenantId() tenantId: string) {
-    await this.service.archive(id, tenantId);
+  async archive(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    await this.service.archive(id, tenantId, user);
     return { message: 'تم أرشفة المستفيد بنجاح' };
   }
 
@@ -227,7 +233,7 @@ export class BeneficiariesController {
     if (user.role === UserRole.BENEFICIARY && id !== myBeneficiaryId) {
       throw new ForbiddenException('لا يمكنك مشاهدة ملف مستفيد آخر');
     }
-    const result = await this.service.getFile(id, tenantId);
+    const result = await this.service.getFile(id, tenantId, user);
     return { data: result };
   }
 
@@ -241,7 +247,7 @@ export class BeneficiariesController {
     @TenantId() tenantId: string,
     @CurrentUser() user: User,
   ) {
-    const result = await this.service.updateFile(id, dto, tenantId, user.id);
+    const result = await this.service.updateFile(id, dto, tenantId, user.id, user);
     return { data: result, message: 'تم تعديل الملف الإلكتروني بنجاح' };
   }
 }

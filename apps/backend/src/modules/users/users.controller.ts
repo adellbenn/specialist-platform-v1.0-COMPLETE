@@ -81,8 +81,13 @@ export class UsersController {
   @WriterOnly()
   @RequirePermissions(Permission.USER_UPDATE)
   @ApiOperation({ summary: 'تعديل مستخدم — أخصائيون فقط' })
-  async update(@Param('id') id: string, @Body() dto: UpdateUserDto, @TenantId() tenantId: string) {
-    const updated = await this.usersService.update(id, dto, tenantId);
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const updated = await this.usersService.update(id, dto, tenantId, user);
     return { data: updated, message: 'تم تعديل المستخدم بنجاح' };
   }
 
@@ -93,11 +98,15 @@ export class UsersController {
   @WriterOnly()
   @RequirePermissions(Permission.USER_DEACTIVATE)
   @ApiOperation({ summary: 'تفعيل/تعطيل مستخدم — أخصائيون فقط' })
-  async toggleActive(@Param('id') id: string, @TenantId() tenantId: string) {
-    const user = await this.usersService.toggleActive(id, tenantId);
+  async toggleActive(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const toggled = await this.usersService.toggleActive(id, tenantId, user);
     return {
-      data: user,
-      message: user.isActive ? 'تم تفعيل المستخدم' : 'تم تعطيل المستخدم',
+      data: toggled,
+      message: toggled.isActive ? 'تم تفعيل المستخدم' : 'تم تعطيل المستخدم',
     };
   }
 
@@ -108,8 +117,8 @@ export class UsersController {
   @WriterOnly()
   @RequirePermissions(Permission.USER_DELETE)
   @ApiOperation({ summary: 'حذف مستخدم — أخصائيون فقط' })
-  async remove(@Param('id') id: string, @TenantId() tenantId: string) {
-    await this.usersService.remove(id, tenantId);
+  async remove(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user: User) {
+    await this.usersService.remove(id, tenantId, user);
     return { message: 'تم حذف المستخدم بنجاح' };
   }
 

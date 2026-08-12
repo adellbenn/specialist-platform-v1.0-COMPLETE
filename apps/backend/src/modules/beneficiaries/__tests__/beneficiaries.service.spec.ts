@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import {
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { BeneficiariesService } from '../beneficiaries.service';
 import { Beneficiary, BeneficiaryStatus, CaseType } from '../beneficiary.entity';
@@ -304,6 +305,17 @@ describe('BeneficiariesService', () => {
 
       await service.changeStatus('ben-1', BeneficiaryStatus.INACTIVE, tenantId);
       expect(beneficiaryRepo.save).toHaveBeenCalled();
+    });
+
+    it('should forbid specialist changing status of a case not assigned to them', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(
+        makeBeneficiary({ assignedSpecialistId: 'other-spec' }),
+      );
+      const specUser = makeUser(UserRole.SPECIALIST);
+
+      await expect(
+        service.changeStatus('ben-1', BeneficiaryStatus.INACTIVE, tenantId, specUser),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

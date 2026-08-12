@@ -64,7 +64,7 @@ function PersonIllustration() {
 }
 
 export default function AnalyticsPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'supervisor'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenueTrend, setRevenueTrend] = useState<Array<{ month: string; revenue: number }>>([]);

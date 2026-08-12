@@ -54,8 +54,8 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         processQueue(new Error('No refresh token'), null);
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
+        Cookies.remove('accessToken', { path: '/' });
+        Cookies.remove('refreshToken', { path: '/' });
         window.location.href = '/auth/login';
         return Promise.reject(error);
       }
@@ -64,15 +64,20 @@ apiClient.interceptors.response.use(
         const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
         const newAccessToken = data.data.accessToken;
 
-        Cookies.set('accessToken', newAccessToken, { expires: 1 });
+        Cookies.set('accessToken', newAccessToken, {
+          expires: 1,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+        });
         apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
 
         processQueue(null, newAccessToken);
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as Error, null);
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
+        Cookies.remove('accessToken', { path: '/' });
+        Cookies.remove('refreshToken', { path: '/' });
         window.location.href = '/auth/login';
         return Promise.reject(refreshError);
       } finally {
