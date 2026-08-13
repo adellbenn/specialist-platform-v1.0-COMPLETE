@@ -218,7 +218,7 @@ export class PaymentsService {
     }
 
     const [data, total] = await qb
-      .orderBy('i.created_at', 'DESC')
+      .orderBy('i.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

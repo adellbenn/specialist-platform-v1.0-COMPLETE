@@ -196,8 +196,8 @@ describe('PermissionsService', () => {
       ];
       permRepo.find.mockResolvedValue(perms);
       const result = await service.findPermissionsByModule();
-      expect(result['beneficiaries']).toHaveLength(2);
-      expect(result['appointments']).toHaveLength(1);
+      expect(result['beneficiary']).toHaveLength(2);
+      expect(result['appointment']).toHaveLength(1);
     });
 
     it('should return empty object if no permissions', async () => {

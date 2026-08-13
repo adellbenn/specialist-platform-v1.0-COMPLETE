@@ -329,17 +329,17 @@ export class PermissionsService {
       {
         name: 'استقبال',
         color: '#2196F3',
-        permissionIds: [...byModule('appointments'), ...byModule('patients'), ...byModule('files')],
+        permissionIds: [...byModule('appointment'), ...byModule('beneficiary'), ...byModule('file')],
       },
       {
         name: 'أخصائي',
         color: '#4CAF50',
         permissionIds: [
-          ...byModule('appointments'),
-          ...byModule('patients'),
-          ...byModule('sessions'),
-          ...byModule('medical_records'),
-          ...byModule('files'),
+          ...byModule('appointment'),
+          ...byModule('beneficiary'),
+          ...byModule('session'),
+          ...byModule('medical_record'),
+          ...byModule('file'),
         ],
       },
       {
@@ -350,7 +350,7 @@ export class PermissionsService {
       {
         name: 'محاسب',
         color: '#FF9800',
-        permissionIds: [...byModule('payments'), ...byModule('invoices'), ...byModule('reports')],
+        permissionIds: [...byModule('payment'), ...byModule('invoice'), ...byModule('report')],
       },
     ];
 

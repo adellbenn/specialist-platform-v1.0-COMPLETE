@@ -1,0 +1,14 @@
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'e2e-jwt-secret-32-characters-minimum-value';
+process.env.JWT_REFRESH_SECRET = 'e2e-refresh-secret-32-characters-minimum-value';
+process.env.JWT_EXPIRES_IN = '15m';
+process.env.JWT_REFRESH_EXPIRES_IN = '7d';
+process.env.DB_TYPE = 'sqlite';
+process.env.DB_SYNC = 'true';
+process.env.DB_LOGGING = 'false';
+process.env.THROTTLE_LIMIT = '100000';
+process.env.THROTTLE_TTL = '300';
+process.env.MAX_FILE_SIZE = '1024';
+process.env.SUPER_ADMIN_EMAIL = 'e2e-super-admin@example.com';
+process.env.SUPER_ADMIN_PASSWORD = 'E2eAdminPass123!';
+process.env.CORS_ORIGINS = 'http://localhost:3000';

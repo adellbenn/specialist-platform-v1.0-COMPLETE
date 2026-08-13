@@ -1,4 +1,5 @@
 import { getAllModuleActions, PermissionModule, PermissionAction } from '../permission.entity';
+import { Permission } from '@common/permissions/permissions.enum';
 
 describe('Permission Entity', () => {
   describe('getAllModuleActions', () => {
@@ -83,6 +84,14 @@ describe('Permission Entity', () => {
       const keys = result.map((r) => r.key);
       const uniqueKeys = new Set(keys);
       expect(keys.length).toBe(uniqueKeys.size);
+    });
+
+    it('should cover every Permission registry key exactly (RBAC invariant)', () => {
+      const result = getAllModuleActions();
+      const keySet = new Set(result.map((r) => r.key));
+      const registryKeys = Object.values(Permission);
+      const missing = registryKeys.filter((key) => !keySet.has(key));
+      expect(missing).toEqual([]);
     });
   });
 });

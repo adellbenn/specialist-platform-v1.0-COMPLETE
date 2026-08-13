@@ -94,7 +94,7 @@ import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.in
           UserPermission,
         ];
         const isProd = config.get('app.nodeEnv') === 'production';
-        let sync = config.get('database.sync', false);
+        const sync = config.get('database.sync', false);
 
         if (isProd && sync) {
           throw new Error(

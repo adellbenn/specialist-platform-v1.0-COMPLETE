@@ -103,7 +103,7 @@ export class AppointmentsService {
       qb.andWhere('a.scheduled_at <= :to', { to: end });
     }
 
-    qb.orderBy('a.scheduled_at', 'ASC')
+    qb.orderBy('a.scheduledAt', 'ASC')
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -152,7 +152,7 @@ export class AppointmentsService {
         qb.andWhere('a.location LIKE :location', { location: `%${filters.location}%` });
     }
 
-    const appointments = await qb.orderBy('a.scheduled_at', 'ASC').getMany();
+    const appointments = await qb.orderBy('a.scheduledAt', 'ASC').getMany();
 
     // تنظيم حسب اليوم للتقويم
     const byDay: Record<string, Appointment[]> = {};

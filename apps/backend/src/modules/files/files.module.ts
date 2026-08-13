@@ -5,11 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 import { FileAttachment } from './file-attachment.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { Report } from '@modules/reports/report.entity';
+import { Session } from '@modules/sessions/session.entity';
 import { VirusScannerService } from '@common/security/virus-scanner.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([FileAttachment]),
+    TypeOrmModule.forFeature([FileAttachment, Beneficiary, Report, Session]),
     MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

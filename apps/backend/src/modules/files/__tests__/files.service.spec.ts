@@ -5,6 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { FilesService } from '../files.service';
 import { FileAttachment, EntityType } from '../file-attachment.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { Report } from '@modules/reports/report.entity';
+import { Session } from '@modules/sessions/session.entity';
 import { VirusScannerService } from '@common/security/virus-scanner.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -72,6 +75,18 @@ describe('FilesService', () => {
             save: jest.fn(),
             remove: jest.fn(),
           },
+        },
+        {
+          provide: getRepositoryToken(Beneficiary),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(Report),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(Session),
+          useValue: { findOne: jest.fn() },
         },
         {
           provide: ConfigService,

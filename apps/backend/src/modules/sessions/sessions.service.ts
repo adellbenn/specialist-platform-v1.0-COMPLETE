@@ -65,7 +65,7 @@ export class SessionsService {
     if (dateTo) qb.andWhere('s.started_at <= :to', { to: new Date(dateTo) });
 
     const [data, total] = await qb
-      .orderBy('s.started_at', 'DESC')
+      .orderBy('s.startedAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

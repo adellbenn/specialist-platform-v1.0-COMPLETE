@@ -94,9 +94,9 @@ describe('FilesController', () => {
         sendFile: jest.fn(),
       } as any;
 
-      await controller.download('f-1', 'tenant-1', res);
+      await controller.download('f-1', 'tenant-1', res, mockUser);
 
-      expect(service.getFilePath).toHaveBeenCalledWith('f-1', 'tenant-1');
+      expect(service.getFilePath).toHaveBeenCalledWith('f-1', 'tenant-1', mockUser);
       expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
       expect(res.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +6,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { FileAttachment, EntityType } from './file-attachment.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { Report } from '@modules/reports/report.entity';
+import { Session } from '@modules/sessions/session.entity';
+import { Invoice } from '@modules/payments/invoice.entity';
+import { User, UserRole } from '@modules/users/user.entity';
 import { VirusScannerService } from '@common/security/virus-scanner.service';
 
 /** أنواع الملفات المسموح بها */
@@ -33,6 +38,12 @@ export class FilesService {
   constructor(
     @InjectRepository(FileAttachment)
     private fileRepo: Repository<FileAttachment>,
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepo: Repository<Beneficiary>,
+    @InjectRepository(Report)
+    private reportRepo: Repository<Report>,
+    @InjectRepository(Session)
+    private sessionRepo: Repository<Session>,
     private configService: ConfigService,
     private virusScanner: VirusScannerService,
   ) {
@@ -155,9 +166,18 @@ export class FilesService {
   async getFilePath(
     id: string,
     tenantId: string,
+    requestingUser?: User,
   ): Promise<{ file: FileAttachment; absolutePath: string }> {
     const file = await this.fileRepo.findOne({ where: { id, tenantId } });
     if (!file) throw new NotFoundException('الملف غير موجود');
+
+    // التحقق من الصلاحيات وفهرس الملكية للأخصائيين
+    if (requestingUser?.role === UserRole.SPECIALIST) {
+      const effective = await this.checkSpecialistFileAccess(file, requestingUser.id);
+      if (!effective) {
+        throw new ForbiddenException('لا يمكنك تحميل هذا الملف لانه ليس ملكاً لك');
+      }
+    }
 
     const absolutePath = path.join(path.resolve(this.uploadDir), file.filePath);
 
@@ -167,6 +187,43 @@ export class FilesService {
     }
 
     return { file, absolutePath };
+  }
+
+  /** unified scope check for specialist-owned files */
+  private async checkSpecialistFileAccess(
+    file: FileAttachment, specialistId: string,
+  ): Promise<boolean> {
+    switch (file.entityType) {
+      case EntityType.BENEFICIARY: {
+        const beneficiary = await this.beneficiaryRepo.findOne({
+          where: { id: file.entityId, tenantId: file.tenantId },
+          relations: ['assignedSpecialist'],
+        });
+        if (!beneficiary || beneficiary.assignedSpecialistId !== specialistId) return false;
+        return true;
+      }
+      case EntityType.REPORT: {
+        const report = await this.reportRepo.findOne({
+          where: { id: file.entityId, tenantId: file.tenantId },
+        });
+        if (!report || report.specialistId !== specialistId) return false;
+        return true;
+      }
+      case EntityType.SESSION: {
+        const session = await this.sessionRepo.findOne({
+          where: { id: file.entityId, tenantId: file.tenantId },
+          relations: ['specialist'],
+        });
+        if (!session || session.specialistId !== specialistId) return false;
+        return true;
+      }
+      case EntityType.INVOICE: {
+        // الأخصائيون ليس لديهم صلاحية عرض فواتير
+        return false;
+      }
+      default:
+        return true; // لإدارة المركز والمحاسب يفحص rbac السابق
+    }
   }
 
   // ─── DELETE ───────────────────────────────────────────────

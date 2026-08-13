@@ -4,17 +4,17 @@ describe('ReportsController', () => {
   let controller: ReportsController;
   let service: any;
 
-  beforeEach(() => {
+beforeEach(() => {
     service = {
       create: jest.fn(),
       findAll: jest.fn(),
       getStats: jest.fn(),
-      findOne: jest.fn(),
+      toggleShare: jest.fn(),
+      archive: jest.fn(),
       update: jest.fn(),
       submit: jest.fn(),
       approve: jest.fn(),
-      toggleShare: jest.fn(),
-      archive: jest.fn(),
+      findOne: jest.fn(),
     };
     controller = new ReportsController(service);
   });
@@ -133,9 +133,9 @@ describe('ReportsController', () => {
     it('should call service.archive', async () => {
       service.archive.mockResolvedValue(undefined);
 
-      const response = await controller.archive('rpt-1', 'tenant-1');
+      const response = await controller.archive('rpt-1', 'tenant-1', mockUser);
 
-      expect(service.archive).toHaveBeenCalledWith('rpt-1', 'tenant-1');
+      expect(service.archive).toHaveBeenCalledWith('rpt-1', 'tenant-1', mockUser);
       expect(response).toEqual({ message: 'تم أرشفة التقرير' });
     });
   });

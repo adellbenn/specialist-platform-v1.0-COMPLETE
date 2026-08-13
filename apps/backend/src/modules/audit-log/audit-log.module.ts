@@ -55,7 +55,7 @@ export class AuditLogService {
     const qb = this.auditRepo
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.user', 'user')
-      .orderBy('a.created_at', 'DESC');
+      .orderBy('a.createdAt', 'DESC');
 
     if (tenantId) qb.andWhere('a.tenant_id = :tenantId', { tenantId });
     if (userId) qb.andWhere('a.user_id = :userId', { userId });

@@ -71,7 +71,7 @@ export class ReportsService {
     if (status) qb.andWhere('r.status = :status', { status });
 
     const [data, total] = await qb
-      .orderBy('r.created_at', 'DESC')
+      .orderBy('r.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
@@ -210,8 +210,15 @@ export class ReportsService {
 
   // ─── ARCHIVE ──────────────────────────────────────────────
 
-  async archive(id: string, tenantId: string): Promise<void> {
+  async archive(id: string, tenantId: string, requestingUser?: User): Promise<void> {
     const report = await this.findOne(id, tenantId);
+
+    if (requestingUser?.role === UserRole.SPECIALIST) {
+      if (report.specialistId !== requestingUser.id) {
+        throw new ForbiddenException('لا يمكنك أرشفة تقرير أخصائي آخر');
+      }
+    }
+
     report.status = ReportStatus.ARCHIVED;
     await this.reportRepo.save(report);
   }

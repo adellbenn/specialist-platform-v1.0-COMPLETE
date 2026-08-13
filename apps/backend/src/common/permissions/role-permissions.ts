@@ -98,6 +98,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, Permission[]> = {
     Permission.APPOINTMENT_VIEW_ALL,
     Permission.SESSION_VIEW_ALL,
     Permission.REPORT_VIEW_ALL,
+    Permission.REPORT_VIEW_OWN,
     Permission.REPORT_APPROVE,
     Permission.REPORT_EXPORT,
     Permission.PROFILE_VIEW_SELF,

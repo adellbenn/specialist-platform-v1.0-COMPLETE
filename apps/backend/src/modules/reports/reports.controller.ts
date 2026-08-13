@@ -158,8 +158,8 @@ export class ReportsController {
   @RequirePermissions(Permission.REPORT_UPDATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'أرشفة تقرير' })
-  async archive(@Param('id') id: string, @TenantId() tenantId: string) {
-    await this.service.archive(id, tenantId);
+  async archive(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user?: User) {
+    await this.service.archive(id, tenantId, user);
     return { message: 'تم أرشفة التقرير' };
   }
 }

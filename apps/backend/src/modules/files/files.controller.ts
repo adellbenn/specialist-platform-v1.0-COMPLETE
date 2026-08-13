@@ -98,9 +98,10 @@ export class FilesController {
    */
   @Get(':id/download')
   @AllStaff()
+  @RequirePermissions(Permission.FILE_VIEW)
   @ApiOperation({ summary: 'تحميل ملف' })
-  async download(@Param('id') id: string, @TenantId() tenantId: string, @Res() res: Response) {
-    const { file, absolutePath } = await this.service.getFilePath(id, tenantId);
+  async download(@Param('id') id: string, @TenantId() tenantId: string, @Res() res: Response, @CurrentUser() user: User) {
+    const { file, absolutePath } = await this.service.getFilePath(id, tenantId, user);
 
     res.setHeader('Content-Type', file.mimeType);
     res.setHeader(
