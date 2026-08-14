@@ -20,7 +20,7 @@ const options: DataSourceOptions = isPostgres
       synchronize: false,
       logging: process.env.DB_LOGGING === 'true',
       ssl:
-        process.env.NODE_ENV === 'production'
+        process.env.NODE_ENV === 'production' && process.env.DB_SSL !== 'false'
           ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
           : false,
     }

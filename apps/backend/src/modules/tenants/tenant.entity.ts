@@ -1,5 +1,6 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 
 export enum TenantType {
   CLINIC = 'clinic',
@@ -33,7 +34,7 @@ export class Tenant extends AbstractEntity {
   })
   subscriptionPlan: SubscriptionPlan;
 
-  @Column({ name: 'subscription_expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'subscription_expires_at', type: timestampColumnType, nullable: true })
   subscriptionExpiresAt: Date;
 
   @Column({ name: 'max_users', default: 10 })

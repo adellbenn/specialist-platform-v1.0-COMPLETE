@@ -2,7 +2,16 @@ version: '3.9'
 
 # ════════════════════════════════════════════════════════
 # بيئة الإنتاج — يتطلب ملف .env.production
-# تشغيل: docker-compose -f docker-compose.prod.yml up -d
+# تشغيل: docker-compose --env-file .env.production -f docker-compose.prod.yml up -d
+#
+# ملاحظات:
+# - مخطط قاعدة البيانات يُدار عبر TypeORM migrations فقط.
+#   خدمة `migrate` تنفذ `migration:run` قبل إقلاع backend،
+#   وملف init.sql لا يبني الجداول (امتدادات فقط).
+# - frontend يُبنى بقيم NEXT_PUBLIC_* وقت البناء (تثبَّت
+#   داخل الصورة ولا يمكن تغييرها بعد البناء).
+# - يجب تمرير --env-file .env.production حتى تُقرأ قيم
+#   ${DB_NAME} و ${DB_PASSWORD} وغيرها أثناء التوسيع (interpolation).
 # ════════════════════════════════════════════════════════
 
 services:
@@ -47,19 +56,56 @@ services:
     expose:
       - "6379"
 
-  # ─── Backend ──────────────────────────────────────────
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: ../../infrastructure/docker/Dockerfile.backend
-      target: production
-    container_name: specialist_backend_prod
+  # ─── ClamAV (فحص المرفقات من الفيروسات) ───────────────
+  clamav:
+    image: clamav/clamav:stable
+    container_name: specialist_clamav_prod
     restart: always
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - internal
+    expose:
+      - "3310"
+
+  # ─── Migrations (يُنفذ مرة واحدة قبل إقلاع backend) ──
+  migrate:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      target: production
+    container_name: specialist_migrate_prod
+    restart: "no"
     env_file: .env.production
     environment:
       NODE_ENV:   production
       DB_HOST:    postgres
       REDIS_HOST: redis
+    command: ["sh", "-c", "npm run migration:run"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ─── Backend ──────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+      target: production
+    container_name: specialist_backend_prod
+    restart: always
+    env_file: .env.production
+    environment:
+      NODE_ENV:     production
+      DB_HOST:      postgres
+      REDIS_HOST:   redis
+      CLAMAV_HOST:  clamav
     volumes:
       - uploads_data:/app/uploads
     depends_on:
@@ -67,6 +113,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - internal
     expose:
@@ -80,13 +128,14 @@ services:
   # ─── Frontend ─────────────────────────────────────────
   frontend:
     build:
-      context: ./apps/frontend
-      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
       target: production
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
+        NEXT_PUBLIC_APP_NAME: ${APP_NAME}
     container_name: specialist_frontend_prod
     restart: always
-    environment:
-      NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
     depends_on:
       - backend
     networks:
@@ -110,7 +159,6 @@ services:
     volumes:
       - ./infrastructure/docker/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infrastructure/ssl:/etc/nginx/ssl:ro
-      - uploads_data:/var/www/uploads:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - backend
@@ -125,7 +173,9 @@ services:
     container_name: specialist_backup
     restart: "no"
     environment:
-      PGPASSWORD: ${DB_PASSWORD}
+      PGPASSWORD:    ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB:   ${DB_NAME}
     volumes:
       - backups_data:/backups
       - ./infrastructure/scripts/backup.sh:/backup.sh:ro

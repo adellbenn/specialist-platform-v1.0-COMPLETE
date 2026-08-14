@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { User } from '@modules/users/user.entity';
 
 @Entity('password_reset_tokens')
@@ -16,10 +17,10 @@ export class PasswordResetToken extends AbstractEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'expires_at', type: 'datetime' })
+  @Column({ name: 'expires_at', type: timestampColumnType })
   expiresAt: Date;
 
-  @Column({ name: 'used_at', type: 'datetime', nullable: true })
+  @Column({ name: 'used_at', type: timestampColumnType, nullable: true })
   usedAt: Date;
 
   @Column({ name: 'is_used', default: false })

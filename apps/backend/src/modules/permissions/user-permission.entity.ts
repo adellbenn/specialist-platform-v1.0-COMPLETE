@@ -22,7 +22,7 @@ export class UserPermission extends AbstractEntity {
   @JoinColumn({ name: 'permission_id' })
   permission: Permission;
 
-  @Column({ type: 'varchar', length: 20, default: OverrideType.GRANTED })
+  @Column({ name: 'override_type', type: 'varchar', length: 20, default: OverrideType.GRANTED })
   overrideType: OverrideType;
 
   @Column({ name: 'granted_by', nullable: true })

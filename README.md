@@ -120,13 +120,23 @@ npm run dev
 
 ```bash
 # Development
-docker-compose up -d
+docker-compose up -d --build
 
 # Production
 cp .env.production.example .env.production
-# عدّل القيم في .env.production
-docker-compose -f docker-compose.prod.yml up -d
+# عدّل القيم في .env.production (إلزامي: DB_TYPE=postgres,
+# SUPER_ADMIN_PASSWORD، JWT_SECRET/JWT_REFRESH_SECRET، REDIS_PASSWORD)
+docker-compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
+
+> ⚠️ ملاحظات الإنتاج:
+> - تمرير `--env-file .env.production` ضروري حتى تُقرأ القيم
+>   المستخدمة في docker-compose (قاعدة البيانات، Redis، النطاق).
+> - مخطط قاعدة البيانات يُنشأ تلقائياً عبر TypeORM migrations (خدمة `migrate`).
+> - `NEXT_PUBLIC_API_URL` تُثبَّت وقت البناء — في الإنتاج تستخدم القيمة
+>   النسبية `/api/v1` ويوجّه nginx الطلبات إلى الـ backend.
+> - أول تشغيل ينشئ حساب Super Admin من `SUPER_ADMIN_EMAIL` /
+>   `SUPER_ADMIN_PASSWORD` في `.env.production`.
 
 ---
 
@@ -224,11 +234,12 @@ nano .env.production  # عدّل جميع القيم
 mkdir infrastructure/ssl
 # انسخ fullchain.pem و privkey.pem
 
-# 5. تشغيل
-docker-compose -f docker-compose.prod.yml up -d
+# 5. تشغيل (يبني الصور ويشغّل migrations تلقائياً)
+docker-compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 # 6. تحقق من الصحة
-docker-compose -f docker-compose.prod.yml ps
+docker-compose --env-file .env.production -f docker-compose.prod.yml ps
+curl -fsS https://your-domain.com/api/v1/health
 ```
 
 ---

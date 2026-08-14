@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { User } from '@modules/users/user.entity';
 
@@ -50,6 +51,6 @@ export class Notification extends AbstractEntity {
   @Index()
   isRead: boolean;
 
-  @Column({ name: 'read_at', type: 'datetime', nullable: true })
+  @Column({ name: 'read_at', type: timestampColumnType, nullable: true })
   readAt: Date;
 }

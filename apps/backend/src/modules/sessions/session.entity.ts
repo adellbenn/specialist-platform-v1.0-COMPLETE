@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { User } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
@@ -51,10 +52,10 @@ export class Session extends AbstractEntity {
   @Column({ name: 'session_number', default: 1 })
   sessionNumber: number;
 
-  @Column({ name: 'started_at', type: 'datetime' })
+  @Column({ name: 'started_at', type: timestampColumnType })
   startedAt: Date;
 
-  @Column({ name: 'ended_at', type: 'datetime', nullable: true })
+  @Column({ name: 'ended_at', type: timestampColumnType, nullable: true })
   endedAt: Date;
 
   @Column({ name: 'actual_duration_minutes', nullable: true })

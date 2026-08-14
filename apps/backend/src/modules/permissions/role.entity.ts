@@ -17,10 +17,10 @@ export class Role extends AbstractEntity {
   @Column({ length: 50, nullable: true })
   icon: string;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ default: false })
+  @Column({ name: 'is_system', default: false })
   isSystem: boolean;
 
   @Column({ default: 0 })

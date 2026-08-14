@@ -2,6 +2,7 @@ import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcryptjs';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { Role } from '@modules/permissions/role.entity';
 
@@ -119,13 +120,13 @@ export class User extends AbstractEntity {
   @Column({ name: 'preferences', type: 'simple-json', nullable: true })
   preferences: Record<string, any>;
 
-  @Column({ name: 'last_login_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_login_at', type: timestampColumnType, nullable: true })
   lastLoginAt: Date;
 
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts: number;
 
-  @Column({ name: 'locked_until', type: 'datetime', nullable: true })
+  @Column({ name: 'locked_until', type: timestampColumnType, nullable: true })
   lockedUntil: Date;
 
   @Column({ name: 'must_change_password', default: false })

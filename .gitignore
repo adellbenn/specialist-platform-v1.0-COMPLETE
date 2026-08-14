@@ -49,6 +49,13 @@ test-results/
 apps/backend/uploads/
 !apps/backend/uploads/.gitkeep
 
+# ─── Local Databases ────────────────────────
+apps/backend/data/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
 # ─── Docker ─────────────────────────────────
 infrastructure/ssl/
 backups/

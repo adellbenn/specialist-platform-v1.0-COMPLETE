@@ -135,12 +135,14 @@ if (metricReader) {
 const sdk = new NodeSDK(sdkConfig);
 
 // Graceful shutdown
+// ملاحظة: لا نستدعي process.exit هنا حتى تُكمل NestJS إغلاقها
+// النظيف (enableShutdownHooks في main.ts يغلق HTTP وDataSource
+// وRedis ثم يخرج العملية بشكل طبيعي عندما يفرغ event loop).
 process.on('SIGTERM', () => {
   sdk
     .shutdown()
     .then(() => console.log('[OTel] Tracing shut down'))
-    .catch((err) => console.error('[OTel] Error shutting down', err))
-    .finally(() => process.exit(0));
+    .catch((err) => console.error('[OTel] Error shutting down', err));
 });
 
 // Start SDK — this must run before any other imports

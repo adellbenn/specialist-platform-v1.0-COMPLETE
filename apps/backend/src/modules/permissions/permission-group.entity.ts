@@ -13,10 +13,10 @@ export class PermissionGroup extends AbstractEntity {
   @Column({ length: 20, default: '#6B5B95' })
   color: string;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ default: false })
+  @Column({ name: 'is_system', default: false })
   isSystem: boolean;
 
   @Column({ name: 'created_by', nullable: true })

@@ -1,16 +1,31 @@
 # ════════════════════════════════════════════
+# Dockerfile — Backend
+# Build context: جذر الـ monorepo (وليس مجلد التطبيق)
+# لماذا؟ lockfile الوحيد (package-lock.json) في الجذر،
+# والنصب يتم عبر npm workspaces من الجذر.
+# ════════════════════════════════════════════
+
+# ════════════════════════════════════════════
 # Stage 1: Build
 # ════════════════════════════════════════════
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /repo
 
-# تثبيت التبعيات أولاً (layer caching)
-COPY package*.json ./
-RUN npm ci --only=production=false && npm cache clean --force
+# أدوات بناء الحزم الأصلية (sqlite3 على Alpine/musl)
+RUN apk add --no-cache python3 make g++
+
+# تثبيت التبعيات أولاً (layer caching) — من جذر الـ workspace
+COPY package.json package-lock.json ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY apps/frontend/package.json apps/frontend/package.json
+RUN npm ci && npm cache clean --force
 
 COPY . .
-RUN npm run build
+RUN npm run build:backend
+
+# إزالة التبعيات غير الضرورية وقت التشغيل
+RUN npm prune --omit=dev && npm cache clean --force
 
 # ════════════════════════════════════════════
 # Stage 2: Production
@@ -27,18 +42,18 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser  -S nestjs -u 1001 -G nodejs
 
 # نسخ ملفات الإنتاج فقط
-COPY --from=builder --chown=nestjs:nodejs /app/dist       ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
-COPY --chown=nestjs:nodejs package.json ./
+COPY --from=builder --chown=nestjs:nodejs /repo/apps/backend/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /repo/node_modules ./node_modules
+COPY --chown=nestjs:nodejs apps/backend/package.json ./
 
-# مجلد الرفع
-RUN mkdir -p uploads && chown nestjs:nodejs uploads
+# مجلدات الرفع والسجلات (مملوكة للمستخدم غير root)
+RUN mkdir -p uploads logs && chown nestjs:nodejs uploads logs
 
 USER nestjs
 
 EXPOSE 3001
 
-# Health check
+# Health check — يتطلب نقطة /api/v1/health (موجودة في HealthModule)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:3001/api/v1/health || exit 1
 

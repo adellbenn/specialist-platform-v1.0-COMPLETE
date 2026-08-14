@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { User } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
@@ -48,7 +49,7 @@ export class Appointment extends AbstractEntity {
   @JoinColumn({ name: 'specialist_id' })
   specialist: User;
 
-  @Column({ name: 'scheduled_at', type: 'datetime' })
+  @Column({ name: 'scheduled_at', type: timestampColumnType })
   @Index()
   scheduledAt: Date;
 
@@ -71,7 +72,7 @@ export class Appointment extends AbstractEntity {
   @Column({ name: 'cancellation_reason', type: 'text', nullable: true })
   cancellationReason: string;
 
-  @Column({ name: 'reminder_sent_at', type: 'datetime', nullable: true })
+  @Column({ name: 'reminder_sent_at', type: timestampColumnType, nullable: true })
   reminderSentAt: Date;
 
   @Column({ name: 'created_by', nullable: true })

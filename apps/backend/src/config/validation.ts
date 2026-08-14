@@ -49,6 +49,7 @@ export const validationSchema = Joi.object({
   DB_POOL_SIZE: Joi.number().min(1).max(100).default(10),
   DB_IDLE_TIMEOUT_MS: Joi.number().positive().default(30000),
   DB_CONNECT_TIMEOUT_MS: Joi.number().positive().default(5000),
+  DB_SSL: Joi.string().valid('true', 'false').default('true'),
   DB_SSL_REJECT_UNAUTHORIZED: Joi.string().valid('true', 'false').default('true'),
 
   // ─── Redis ────────────────────────────────────────────────

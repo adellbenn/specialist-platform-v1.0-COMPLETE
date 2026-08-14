@@ -121,7 +121,7 @@ import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.in
               idleTimeoutMillis: config.get('database.idleTimeoutMs', 30000),
               connectionTimeoutMillis: config.get('database.connectTimeoutMs', 5000),
             },
-            ssl: isProd
+            ssl: isProd && config.get('database.ssl', true)
               ? { rejectUnauthorized: config.get('database.sslRejectUnauthorized', true) }
               : false,
           } as any;

@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn, BeforeInsert } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { User } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
@@ -74,7 +75,7 @@ export class Invoice extends AbstractEntity {
   @Index()
   paymentStatus: PaymentStatus;
 
-  @Column({ name: 'paid_at', type: 'datetime', nullable: true })
+  @Column({ name: 'paid_at', type: timestampColumnType, nullable: true })
   paidAt: Date;
 
   @Column({ type: 'text', nullable: true })

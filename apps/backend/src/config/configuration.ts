@@ -22,6 +22,7 @@ export const dbConfig = registerAs('database', () => ({
   poolSize: parseInt(process.env.DB_POOL_SIZE ?? '10', 10),
   idleTimeoutMs: parseInt(process.env.DB_IDLE_TIMEOUT_MS ?? '30000', 10),
   connectTimeoutMs: parseInt(process.env.DB_CONNECT_TIMEOUT_MS ?? '5000', 10),
+  ssl: process.env.DB_SSL !== 'false',
   sslRejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
 }));
 

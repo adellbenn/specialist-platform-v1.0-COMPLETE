@@ -59,6 +59,9 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
+  // إيقاف نظيف عند استقبال إشارات الإيقاف (docker stop, SIGTERM)
+  app.enableShutdownHooks();
+
   // Validation pipe عالمي
   app.useGlobalPipes(
     new ValidationPipe({

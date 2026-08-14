@@ -8,6 +8,7 @@ export class InitialSchema1721680000000 implements MigrationInterface {
 
     const nowDefault = isSqlite ? "(STRFTIME('%Y-%m-%dT%H:%M:%fZ','now'))" : 'now()';
     const boolType = isSqlite ? 'INTEGER' : 'boolean';
+    const boolDefault = isSqlite ? '1' : 'true';
     const intType = isSqlite ? 'INTEGER' : 'integer';
     const smallIntType = isSqlite ? 'INTEGER' : 'smallint';
     const bigIntType = isSqlite ? 'INTEGER' : 'bigint';
@@ -17,11 +18,13 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     const dateType = isSqlite ? 'TEXT' : 'date';
     const varcharType = 'varchar';
     const jsonType = 'text';
+    const idType = isSqlite ? 'text' : 'uuid';
+    const idDefault = isSqlite ? '' : ' DEFAULT uuid_generate_v4()';
 
     // ─── 1. tenants ───────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "tenants" (
-        "id"                     text NOT NULL,
+        "id"                     ${idType} NOT NULL${idDefault},
         "created_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "name"                   ${varcharType} NOT NULL,
@@ -36,7 +39,7 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "address"                ${varcharType},
         "phone"                  ${varcharType},
         "email"                  ${varcharType},
-        "is_active"              ${boolType} NOT NULL DEFAULT 1,
+        "is_active"              ${boolType} NOT NULL DEFAULT ${boolDefault},
         CONSTRAINT "UQ_tenants_name" UNIQUE ("name"),
         CONSTRAINT "UQ_tenants_slug" UNIQUE ("slug"),
         CONSTRAINT "PK_tenants" PRIMARY KEY ("id")
@@ -46,14 +49,14 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 2. permissions ───────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "permissions" (
-        "id"           text NOT NULL,
+        "id"           ${idType} NOT NULL${idDefault},
         "created_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "module"       ${varcharType} NOT NULL,
         "action"       ${varcharType} NOT NULL,
         "display_name" ${varcharType} NOT NULL,
         "description"  ${textType},
-        "is_system"    ${boolType} NOT NULL DEFAULT 1,
+        "is_system"    ${boolType} NOT NULL DEFAULT ${boolDefault},
         "sort_order"   ${intType} NOT NULL DEFAULT 0,
         CONSTRAINT "PK_permissions" PRIMARY KEY ("id")
       )
@@ -65,17 +68,17 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 3. roles ─────────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "roles" (
-        "id"           text NOT NULL,
+        "id"           ${idType} NOT NULL${idDefault},
         "created_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "name"         ${varcharType} NOT NULL,
         "description"  ${textType},
         "color"        ${varcharType} NOT NULL DEFAULT '#6B5B95',
         "icon"         ${varcharType},
-        "is_active"    ${boolType} NOT NULL DEFAULT 1,
-        "is_system"    ${boolType} NOT NULL DEFAULT 0,
+        "is_active"    ${boolType} NOT NULL DEFAULT ${boolDefault},
+        "is_system"    ${boolType} NOT NULL DEFAULT ${boolDefault},
         "priority"     ${intType} NOT NULL DEFAULT 0,
-        "created_by"   text,
+        "created_by"   ${idType},
         CONSTRAINT "UQ_roles_name" UNIQUE ("name"),
         CONSTRAINT "PK_roles" PRIMARY KEY ("id")
       )
@@ -84,15 +87,15 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 4. permission_groups ─────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "permission_groups" (
-        "id"           text NOT NULL,
+        "id"           ${idType} NOT NULL${idDefault},
         "created_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "name"         ${varcharType} NOT NULL,
         "description"  ${textType},
         "color"        ${varcharType} NOT NULL DEFAULT '#6B5B95',
-        "is_active"    ${boolType} NOT NULL DEFAULT 1,
-        "is_system"    ${boolType} NOT NULL DEFAULT 0,
-        "created_by"   text,
+        "is_active"    ${boolType} NOT NULL DEFAULT ${boolDefault},
+        "is_system"    ${boolType} NOT NULL DEFAULT ${boolDefault},
+        "created_by"   ${idType},
         CONSTRAINT "UQ_permission_groups_name" UNIQUE ("name"),
         CONSTRAINT "PK_permission_groups" PRIMARY KEY ("id")
       )
@@ -101,8 +104,8 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 5. role_permissions (join table) ─────────────────────
     await queryRunner.query(`
       CREATE TABLE "role_permissions" (
-        "role_id"       text NOT NULL,
-        "permission_id" text NOT NULL,
+        "role_id"       ${idType} NOT NULL,
+        "permission_id" ${idType} NOT NULL,
         CONSTRAINT "PK_role_permissions" PRIMARY KEY ("role_id", "permission_id"),
         CONSTRAINT "FK_role_permissions_role_id" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE NO ACTION,
         CONSTRAINT "FK_role_permissions_permission_id" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -118,8 +121,8 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 6. group_permissions (join table) ────────────────────
     await queryRunner.query(`
       CREATE TABLE "group_permissions" (
-        "group_id"      text NOT NULL,
-        "permission_id" text NOT NULL,
+        "group_id"      ${idType} NOT NULL,
+        "permission_id" ${idType} NOT NULL,
         CONSTRAINT "PK_group_permissions" PRIMARY KEY ("group_id", "permission_id"),
         CONSTRAINT "FK_group_permissions_group_id" FOREIGN KEY ("group_id") REFERENCES "permission_groups"("id") ON DELETE CASCADE ON UPDATE NO ACTION,
         CONSTRAINT "FK_group_permissions_permission_id" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -135,10 +138,10 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 7. users ─────────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "users" (
-        "id"                     text NOT NULL,
+        "id"                     ${idType} NOT NULL${idDefault},
         "created_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"              text,
+        "tenant_id"              ${idType},
         "email"                  ${varcharType} NOT NULL,
         "password_hash"          ${varcharType} NOT NULL,
         "first_name"             ${varcharType} NOT NULL,
@@ -147,15 +150,15 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "avatar_url"             ${varcharType},
         "bio"                    ${varcharType},
         "role"                   ${varcharType} NOT NULL,
-        "role_id"                text,
-        "beneficiary_id"         text,
-        "is_active"              ${boolType} NOT NULL DEFAULT 1,
+        "role_id"                ${idType},
+        "beneficiary_id"         ${idType},
+        "is_active"              ${boolType} NOT NULL DEFAULT ${boolDefault},
         "theme_preference"       ${varcharType} NOT NULL DEFAULT 'system',
         "preferences"            ${jsonType},
         "last_login_at"          ${timestampType},
         "failed_login_attempts"  ${intType} NOT NULL DEFAULT 0,
         "locked_until"           ${timestampType},
-        "must_change_password"   ${boolType} NOT NULL DEFAULT 0,
+        "must_change_password"   ${boolType} NOT NULL DEFAULT ${boolDefault},
         CONSTRAINT "UQ_users_email" UNIQUE ("email"),
         CONSTRAINT "PK_users" PRIMARY KEY ("id"),
         CONSTRAINT "FK_users_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -172,10 +175,10 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 8. beneficiaries ─────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "beneficiaries" (
-        "id"                     text NOT NULL,
+        "id"                     ${idType} NOT NULL${idDefault},
         "created_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"             ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"              text NOT NULL,
+        "tenant_id"              ${idType} NOT NULL,
         "file_number"            ${varcharType} NOT NULL,
         "first_name"             ${varcharType} NOT NULL,
         "last_name"              ${varcharType} NOT NULL,
@@ -191,10 +194,10 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "referral_source"        ${varcharType},
         "case_type"              ${varcharType} NOT NULL,
         "status"                 ${varcharType} NOT NULL DEFAULT 'active',
-        "assigned_specialist_id" text,
+        "assigned_specialist_id" ${idType},
         "intake_date"            ${dateType} NOT NULL,
         "notes"                  ${textType},
-        "created_by"             text,
+        "created_by"             ${idType},
         CONSTRAINT "PK_beneficiaries" PRIMARY KEY ("id"),
         CONSTRAINT "FK_beneficiaries_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_beneficiaries_assigned_specialist_id" FOREIGN KEY ("assigned_specialist_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -229,18 +232,18 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 9. beneficiary_files ─────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "beneficiary_files" (
-        "id"                   text NOT NULL,
+        "id"                   ${idType} NOT NULL${idDefault},
         "created_at"           ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"           ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "beneficiary_id"       text NOT NULL,
-        "tenant_id"            text NOT NULL,
+        "beneficiary_id"       ${idType} NOT NULL,
+        "tenant_id"            ${idType} NOT NULL,
         "diagnosis"            ${jsonType},
         "medical_history"      ${textType},
         "educational_history"  ${textType},
         "family_history"       ${textType},
         "assessment_results"   ${jsonType},
         "goals"                ${jsonType},
-        "created_by"           text,
+        "created_by"           ${idType},
         CONSTRAINT "PK_beneficiary_files" PRIMARY KEY ("id"),
         CONSTRAINT "FK_beneficiary_files_beneficiary_id" FOREIGN KEY ("beneficiary_id") REFERENCES "beneficiaries"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_beneficiary_files_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -263,12 +266,12 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 10. appointments ─────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "appointments" (
-        "id"                  text NOT NULL,
+        "id"                  ${idType} NOT NULL${idDefault},
         "created_at"          ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"          ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"           text NOT NULL,
-        "beneficiary_id"      text NOT NULL,
-        "specialist_id"       text NOT NULL,
+        "tenant_id"           ${idType} NOT NULL,
+        "beneficiary_id"      ${idType} NOT NULL,
+        "specialist_id"       ${idType} NOT NULL,
         "scheduled_at"        ${timestampType} NOT NULL,
         "duration_minutes"    ${intType} NOT NULL DEFAULT 60,
         "type"                ${varcharType} NOT NULL DEFAULT 'follow_up',
@@ -277,7 +280,7 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "notes"               ${textType},
         "cancellation_reason" ${textType},
         "reminder_sent_at"    ${timestampType},
-        "created_by"          text,
+        "created_by"          ${idType},
         CONSTRAINT "PK_appointments" PRIMARY KEY ("id"),
         CONSTRAINT "FK_appointments_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_appointments_beneficiary_id" FOREIGN KEY ("beneficiary_id") REFERENCES "beneficiaries"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -314,13 +317,13 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 11. sessions ─────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "sessions" (
-        "id"                       text NOT NULL,
+        "id"                       ${idType} NOT NULL${idDefault},
         "created_at"               ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"               ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"                text NOT NULL,
-        "appointment_id"           text,
-        "beneficiary_id"           text NOT NULL,
-        "specialist_id"            text NOT NULL,
+        "tenant_id"                ${idType} NOT NULL,
+        "appointment_id"           ${idType},
+        "beneficiary_id"           ${idType} NOT NULL,
+        "specialist_id"            ${idType} NOT NULL,
         "session_number"           ${intType} NOT NULL DEFAULT 1,
         "started_at"               ${timestampType} NOT NULL,
         "ended_at"                 ${timestampType},
@@ -360,12 +363,12 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 12. reports ──────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "reports" (
-        "id"                       text NOT NULL,
+        "id"                       ${idType} NOT NULL${idDefault},
         "created_at"               ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"               ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"                text NOT NULL,
-        "beneficiary_id"           text NOT NULL,
-        "specialist_id"            text NOT NULL,
+        "tenant_id"                ${idType} NOT NULL,
+        "beneficiary_id"           ${idType} NOT NULL,
+        "specialist_id"            ${idType} NOT NULL,
         "type"                     ${varcharType} NOT NULL,
         "title"                    ${varcharType} NOT NULL,
         "period_from"              ${dateType},
@@ -373,8 +376,8 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "content"                  ${jsonType} NOT NULL DEFAULT '{}',
         "recommendations"          ${textType},
         "status"                   ${varcharType} NOT NULL DEFAULT 'draft',
-        "shared_with_beneficiary"  ${boolType} NOT NULL DEFAULT 0,
-        "approved_by"              text,
+        "shared_with_beneficiary"  ${boolType} NOT NULL DEFAULT ${boolDefault},
+        "approved_by"              ${idType},
         "approved_at"              ${timestampType},
         CONSTRAINT "PK_reports" PRIMARY KEY ("id"),
         CONSTRAINT "FK_reports_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -402,18 +405,18 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 13. file_attachments ─────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "file_attachments" (
-        "id"              text NOT NULL,
+        "id"              ${idType} NOT NULL${idDefault},
         "created_at"      ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"      ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"       text NOT NULL,
+        "tenant_id"       ${idType} NOT NULL,
         "entity_type"     ${varcharType} NOT NULL,
-        "entity_id"       text NOT NULL,
+        "entity_id"       ${idType} NOT NULL,
         "file_name"       ${varcharType} NOT NULL,
         "file_path"       ${varcharType} NOT NULL,
         "file_size"       ${bigIntType} NOT NULL,
         "mime_type"       ${varcharType} NOT NULL,
         "original_name"   ${varcharType} NOT NULL,
-        "uploaded_by"     text,
+        "uploaded_by"     ${idType},
         CONSTRAINT "PK_file_attachments" PRIMARY KEY ("id"),
         CONSTRAINT "FK_file_attachments_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_file_attachments_uploaded_by" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -435,16 +438,16 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 14. service_packages ─────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "service_packages" (
-        "id"              text NOT NULL,
+        "id"              ${idType} NOT NULL${idDefault},
         "created_at"      ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"      ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"       text NOT NULL,
+        "tenant_id"       ${idType} NOT NULL,
         "name"            ${varcharType} NOT NULL,
         "description"     ${textType},
         "sessions_count"  ${intType} NOT NULL,
         "price"           ${decimalType} NOT NULL,
         "validity_days"   ${intType} NOT NULL DEFAULT 90,
-        "is_active"       ${boolType} NOT NULL DEFAULT 1,
+        "is_active"       ${boolType} NOT NULL DEFAULT ${boolDefault},
         CONSTRAINT "PK_service_packages" PRIMARY KEY ("id"),
         CONSTRAINT "FK_service_packages_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
       )
@@ -459,12 +462,12 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 15. subscriptions ────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "subscriptions" (
-        "id"                 text NOT NULL,
+        "id"                 ${idType} NOT NULL${idDefault},
         "created_at"         ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"         ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"          text NOT NULL,
-        "beneficiary_id"     text NOT NULL,
-        "package_id"         text,
+        "tenant_id"          ${idType} NOT NULL,
+        "beneficiary_id"     ${idType} NOT NULL,
+        "package_id"         ${idType},
         "sessions_used"      ${intType} NOT NULL DEFAULT 0,
         "sessions_remaining" ${intType} NOT NULL,
         "amount_paid"        ${decimalType} NOT NULL DEFAULT 0,
@@ -472,7 +475,7 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "start_date"         ${dateType} NOT NULL,
         "expiry_date"        ${dateType} NOT NULL,
         "status"             ${varcharType} NOT NULL DEFAULT 'active',
-        "created_by"         text,
+        "created_by"         ${idType},
         CONSTRAINT "PK_subscriptions" PRIMARY KEY ("id"),
         CONSTRAINT "FK_subscriptions_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_subscriptions_beneficiary_id" FOREIGN KEY ("beneficiary_id") REFERENCES "beneficiaries"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -505,13 +508,13 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 16. invoices ─────────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "invoices" (
-        "id"               text NOT NULL,
+        "id"               ${idType} NOT NULL${idDefault},
         "created_at"       ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"       ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"        text NOT NULL,
+        "tenant_id"        ${idType} NOT NULL,
         "invoice_number"   ${varcharType} NOT NULL,
-        "beneficiary_id"   text NOT NULL,
-        "subscription_id"  text,
+        "beneficiary_id"   ${idType} NOT NULL,
+        "subscription_id"  ${idType},
         "amount"           ${decimalType} NOT NULL,
         "discount"         ${decimalType} NOT NULL DEFAULT 0,
         "tax"              ${decimalType} NOT NULL DEFAULT 0,
@@ -520,7 +523,7 @@ export class InitialSchema1721680000000 implements MigrationInterface {
         "payment_status"   ${varcharType} NOT NULL DEFAULT 'pending',
         "paid_at"          ${timestampType},
         "notes"            ${textType},
-        "created_by"       text,
+        "created_by"       ${idType},
         CONSTRAINT "PK_invoices" PRIMARY KEY ("id"),
         CONSTRAINT "FK_invoices_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
         CONSTRAINT "FK_invoices_beneficiary_id" FOREIGN KEY ("beneficiary_id") REFERENCES "beneficiaries"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -549,16 +552,16 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 17. notifications ────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "notifications" (
-        "id"          text NOT NULL,
+        "id"          ${idType} NOT NULL${idDefault},
         "created_at"  ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"  ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"   text,
-        "user_id"     text NOT NULL,
+        "tenant_id"   ${idType},
+        "user_id"     ${idType} NOT NULL,
         "type"        ${varcharType} NOT NULL,
         "title"       ${varcharType} NOT NULL,
         "message"     ${textType} NOT NULL,
         "link"        ${varcharType},
-        "is_read"     ${boolType} NOT NULL DEFAULT 0,
+        "is_read"     ${boolType} NOT NULL DEFAULT ${boolDefault},
         "read_at"     ${timestampType},
         CONSTRAINT "PK_notifications" PRIMARY KEY ("id"),
         CONSTRAINT "FK_notifications_tenant_id" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -581,14 +584,14 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 18. audit_logs ───────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "audit_logs" (
-        "id"           text NOT NULL,
+        "id"           ${idType} NOT NULL${idDefault},
         "created_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"   ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "tenant_id"    text,
-        "user_id"      text,
+        "tenant_id"    ${idType},
+        "user_id"      ${idType},
         "action"       ${varcharType} NOT NULL,
         "entity_type"  ${varcharType} NOT NULL,
-        "entity_id"    text,
+        "entity_id"    ${idType},
         "old_values"   ${jsonType},
         "new_values"   ${jsonType},
         "ip_address"   ${varcharType},
@@ -620,14 +623,14 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 19. password_reset_tokens ────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "password_reset_tokens" (
-        "id"          text NOT NULL,
+        "id"          ${idType} NOT NULL${idDefault},
         "created_at"  ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"  ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "token"       ${varcharType} NOT NULL,
-        "user_id"     text NOT NULL,
+        "user_id"     ${idType} NOT NULL,
         "expires_at"  ${timestampType} NOT NULL,
         "used_at"     ${timestampType},
-        "is_used"     ${boolType} NOT NULL DEFAULT 0,
+        "is_used"     ${boolType} NOT NULL DEFAULT ${boolDefault},
         CONSTRAINT "PK_password_reset_tokens" PRIMARY KEY ("id"),
         CONSTRAINT "FK_password_reset_tokens_user_id" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
       )
@@ -642,15 +645,15 @@ export class InitialSchema1721680000000 implements MigrationInterface {
     // ─── 20. user_permissions ─────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "user_permissions" (
-        "id"             text NOT NULL,
+        "id"             ${idType} NOT NULL${idDefault},
         "created_at"     ${timestampType} NOT NULL DEFAULT ${nowDefault},
         "updated_at"     ${timestampType} NOT NULL DEFAULT ${nowDefault},
-        "user_id"        text NOT NULL,
-        "permission_id"  text NOT NULL,
+        "user_id"        ${idType} NOT NULL,
+        "permission_id"  ${idType} NOT NULL,
         "override_type"  ${varcharType} NOT NULL DEFAULT 'granted',
-        "granted_by"     text,
+        "granted_by"     ${idType},
         "expires_at"     ${timestampType},
-        "role_id"        text,
+        "role_id"        ${idType},
         CONSTRAINT "UQ_user_permissions_user_permission" UNIQUE ("user_id", "permission_id"),
         CONSTRAINT "PK_user_permissions" PRIMARY KEY ("id"),
         CONSTRAINT "FK_user_permissions_permission_id" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,

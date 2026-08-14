@@ -1,5 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractEntity } from '@database/abstract.entity';
+import { timestampColumnType } from '@database/dialect';
 import { Tenant } from '@modules/tenants/tenant.entity';
 import { User } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
@@ -96,6 +97,6 @@ export class Report extends AbstractEntity {
   @JoinColumn({ name: 'approved_by' })
   approvedBy: User;
 
-  @Column({ name: 'approved_at', type: 'datetime', nullable: true })
+  @Column({ name: 'approved_at', type: timestampColumnType, nullable: true })
   approvedAt: Date;
 }

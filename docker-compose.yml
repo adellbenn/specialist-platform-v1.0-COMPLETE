@@ -1,5 +1,9 @@
 version: '3.9'
 
+# ═══════════════════════════════
+# بيئة التطوير المحلية
+# تشغيل: docker-compose up -d --build
+# ═══════════════════════════════
 services:
   # ═══════════════════════════════
   # قاعدة البيانات
@@ -30,8 +34,8 @@ services:
   # ═══════════════════════════════
   backend:
     build:
-      context: ./apps/backend
-      dockerfile: ../../infrastructure/docker/Dockerfile.backend
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
     container_name: specialist_backend
     restart: unless-stopped
     env_file: ./apps/backend/.env
@@ -54,12 +58,13 @@ services:
   # ═══════════════════════════════
   frontend:
     build:
-      context: ./apps/frontend
-      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+        NEXT_PUBLIC_APP_NAME: ${APP_NAME:-Specialist Platform}
     container_name: specialist_frontend
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
     ports:
       - "3000:3000"
     depends_on:
