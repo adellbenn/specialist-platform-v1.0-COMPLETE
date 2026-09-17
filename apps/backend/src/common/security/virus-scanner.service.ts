@@ -47,10 +47,17 @@ export class VirusScannerService {
             socket.destroy();
             resolve({ clean: true, error: 'ClamAV timeout — scanning skipped' });
           }
-        }, 10_000);
+        }, 30_000);
 
         socket.on('connect', () => {
           socket.write(`zINSTREAM\0`);
+
+          // Send file size + data + zero terminator
+          const sizeBuf = Buffer.alloc(4);
+          sizeBuf.writeUInt32BE(buffer.length, 0);
+          socket.write(sizeBuf);
+          socket.write(buffer);
+          socket.write(Buffer.alloc(4));
         });
 
         socket.on('data', (data) => {
@@ -94,13 +101,6 @@ export class VirusScannerService {
             resolve({ clean: true, error: 'ClamAV socket timeout' });
           }
         });
-
-        // Send file size + data + zero terminator
-        const sizeBuf = Buffer.alloc(4);
-        sizeBuf.writeUInt32BE(buffer.length, 0);
-        socket.write(sizeBuf);
-        socket.write(buffer);
-        socket.write(Buffer.alloc(4)); // zero terminator
       });
     } catch (err) {
       this.logger.warn(`Scan failed: ${err}`);

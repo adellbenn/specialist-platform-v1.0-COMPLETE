@@ -85,7 +85,7 @@ services:
       NODE_ENV:   production
       DB_HOST:    postgres
       REDIS_HOST: redis
-    command: ["sh", "-c", "npm run migration:run"]
+    command: ["sh", "-c", "for i in 1 2 3 4 5 6 7 8 9 10; do npm run migration:run && exit 0; echo \"migration attempt $$i failed, retrying...\"; sleep 5; done; exit 1"]
     depends_on:
       postgres:
         condition: service_healthy

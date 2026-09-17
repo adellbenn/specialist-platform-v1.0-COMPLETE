@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -62,7 +62,7 @@ export class FilesService {
     file: Express.Multer.File,
     entityType: EntityType,
     entityId: string,
-    tenantId: string,
+    tenantId: string | null,
     uploadedById: string,
   ): Promise<FileAttachment> {
     this.validateFile(file);
@@ -81,7 +81,9 @@ export class FilesService {
 
     // هيكل المجلدات: uploads/{tenantId}/{entityType}/{YYYY-MM}/
     const datePath = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const subDir = path.join(this.uploadDir, tenantId, entityType, datePath);
+    // Super Admin (بدون مركز) يستخدم مجلد "system" بدلاً من tenantId فارغ
+    const tenantDir = tenantId ?? 'system';
+    const subDir = path.join(this.uploadDir, tenantDir, entityType, datePath);
     const safeDir = path.resolve(subDir);
 
     // منع path traversal
@@ -95,7 +97,7 @@ export class FilesService {
     const ext = path.extname(file.originalname).toLowerCase();
     const fileName = `${uuidv4()}${ext}`;
     const filePath = path.join(safeDir, fileName);
-    const relPath = path.join(tenantId, entityType, datePath, fileName);
+    const relPath = path.join(tenantDir, entityType, datePath, fileName);
 
     fs.writeFileSync(filePath, file.buffer);
 
@@ -119,10 +121,14 @@ export class FilesService {
   async getEntityFiles(
     entityType: EntityType,
     entityId: string,
-    tenantId: string,
+    tenantId: string | null,
   ): Promise<FileAttachment[]> {
     return this.fileRepo.find({
-      where: { entityType, entityId, tenantId },
+      where: {
+        entityType,
+        entityId,
+        tenantId: tenantId ?? IsNull(),
+      },
       relations: ['uploadedBy'],
       select: {
         uploadedBy: { id: true, firstName: true, lastName: true },
@@ -134,11 +140,11 @@ export class FilesService {
   // ─── GET ALL FILES (مع pagination) ────────────────────────
 
   async findAll(
-    tenantId: string,
+    tenantId: string | null,
     options: { page?: number; limit?: number; mimeType?: string } = {},
   ) {
     const { page = 1, limit = 24, mimeType } = options;
-    const where: any = { tenantId };
+    const where: any = { tenantId: tenantId ?? IsNull() };
 
     if (mimeType) {
       where.mimeType = mimeType;
@@ -165,10 +171,12 @@ export class FilesService {
 
   async getFilePath(
     id: string,
-    tenantId: string,
+    tenantId: string | null,
     requestingUser?: User,
   ): Promise<{ file: FileAttachment; absolutePath: string }> {
-    const file = await this.fileRepo.findOne({ where: { id, tenantId } });
+    const file = await this.fileRepo.findOne({
+      where: { id, tenantId: tenantId ?? IsNull() },
+    });
     if (!file) throw new NotFoundException('الملف غير موجود');
 
     // التحقق من الصلاحيات وفهرس الملكية للأخصائيين
@@ -193,6 +201,9 @@ export class FilesService {
   private async checkSpecialistFileAccess(
     file: FileAttachment, specialistId: string,
   ): Promise<boolean> {
+    // ملفات Super Admin (بدون مركز) ليست مملوكة لأخصائي
+    if (!file.tenantId) return false;
+
     switch (file.entityType) {
       case EntityType.BENEFICIARY: {
         const beneficiary = await this.beneficiaryRepo.findOne({
@@ -228,8 +239,10 @@ export class FilesService {
 
   // ─── DELETE ───────────────────────────────────────────────
 
-  async delete(id: string, tenantId: string): Promise<void> {
-    const file = await this.fileRepo.findOne({ where: { id, tenantId } });
+  async delete(id: string, tenantId: string | null): Promise<void> {
+    const file = await this.fileRepo.findOne({
+      where: { id, tenantId: tenantId ?? IsNull() },
+    });
     if (!file) throw new NotFoundException('الملف غير موجود');
 
     // حذف الملف الفعلي

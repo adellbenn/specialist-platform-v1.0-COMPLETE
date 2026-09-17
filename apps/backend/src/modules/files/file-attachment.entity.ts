@@ -13,11 +13,12 @@ export enum EntityType {
 @Entity('file_attachments')
 @Index(['tenantId', 'entityType', 'entityId'])
 export class FileAttachment extends AbstractEntity {
-  @Column({ name: 'tenant_id' })
+  /** null لأرفقة Super Admin (بدون مركز) */
+  @Column({ name: 'tenant_id', nullable: true })
   @Index()
-  tenantId: string;
+  tenantId: string | null;
 
-  @ManyToOne(() => Tenant)
+  @ManyToOne(() => Tenant, { nullable: true })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
