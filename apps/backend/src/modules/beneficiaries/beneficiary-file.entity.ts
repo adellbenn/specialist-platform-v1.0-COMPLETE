@@ -31,11 +31,11 @@ export class BeneficiaryFile extends AbstractEntity {
   @JoinColumn({ name: 'beneficiary_id' })
   beneficiary: Beneficiary;
 
-  @Column({ name: 'tenant_id' })
+  @Column({ name: 'tenant_id', nullable: true })
   @Index()
-  tenantId: string;
+  tenantId: string | null;
 
-  @ManyToOne(() => Tenant)
+  @ManyToOne(() => Tenant, { nullable: true })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 

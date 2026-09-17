@@ -34,11 +34,11 @@ export enum ReferralSource {
 @Index(['tenantId', 'status'])
 @Index(['tenantId', 'caseType'])
 export class Beneficiary extends AbstractEntity {
-  @Column({ name: 'tenant_id' })
+  @Column({ name: 'tenant_id', nullable: true })
   @Index()
-  tenantId: string;
+  tenantId: string | null;
 
-  @ManyToOne(() => Tenant)
+  @ManyToOne(() => Tenant, { nullable: true })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
