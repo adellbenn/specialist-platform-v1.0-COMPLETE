@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report, ReportStatus, ReportType } from './report.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import {
   CreateReportDto,
   UpdateReportDto,
@@ -20,11 +21,22 @@ export class ReportsService {
   constructor(
     @InjectRepository(Report)
     private reportRepo: Repository<Report>,
+
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepo: Repository<Beneficiary>,
   ) {}
 
   // ─── CREATE ───────────────────────────────────────────────
 
   async create(dto: CreateReportDto, tenantId: string, specialistId: string): Promise<Report> {
+    if (!dto.beneficiaryId) {
+      throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const beneficiary = await this.beneficiaryRepo.findOne({
+      where: { id: dto.beneficiaryId, tenantId },
+    });
+    if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+
     const report = this.reportRepo.create({
       ...dto,
       tenantId,

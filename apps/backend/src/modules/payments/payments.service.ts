@@ -9,6 +9,7 @@ import { Repository, Between, MoreThanOrEqual, FindOptionsWhere } from 'typeorm'
 import { ServicePackage } from './service-package.entity';
 import { Subscription, SubscriptionStatus } from './subscription.entity';
 import { Invoice, PaymentStatus, PaymentMethod } from './invoice.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import {
   CreatePackageDto,
   UpdatePackageDto,
@@ -30,6 +31,9 @@ export class PaymentsService {
 
     @InjectRepository(Invoice)
     private invoiceRepo: Repository<Invoice>,
+
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepo: Repository<Beneficiary>,
   ) {}
 
   // ═══════════════════════════════════════════
@@ -75,6 +79,14 @@ export class PaymentsService {
     tenantId: string,
     createdById: string,
   ): Promise<Subscription> {
+    if (!dto.beneficiaryId) {
+      throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const beneficiary = await this.beneficiaryRepo.findOne({
+      where: { id: dto.beneficiaryId, tenantId },
+    });
+    if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+
     // التحقق من عدم وجود اشتراك نشط للمستفيد
     const existing = await this.subscriptionRepo.findOne({
       where: {
@@ -182,6 +194,14 @@ export class PaymentsService {
     tenantId: string,
     createdById: string,
   ): Promise<Invoice> {
+    if (!dto.beneficiaryId) {
+      throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const beneficiary = await this.beneficiaryRepo.findOne({
+      where: { id: dto.beneficiaryId, tenantId },
+    });
+    if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+
     const invoiceNumber = await this.generateInvoiceNumber(tenantId);
     const total = Number(dto.amount) - Number(dto.discount ?? 0) + Number(dto.tax ?? 0);
 

@@ -1,16 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SessionsService } from '../sessions.service';
 import { Session, AttendanceStatus } from '../session.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 
 describe('SessionsService', () => {
   let service: SessionsService;
   let sessionRepo: jest.Mocked<Repository<Session>>;
+  let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
 
   const tenantId = 'tenant-1';
+
+  const makeBeneficiary = (overrides: Partial<Beneficiary> = {}): Beneficiary =>
+    ({
+      id: 'ben-1',
+      tenantId,
+      firstName: 'Ahmed',
+      lastName: 'Ali',
+      fileNumber: 'BNF-00001',
+      ...overrides,
+    }) as Beneficiary;
 
   const makeSession = (overrides: Partial<Session> = {}): Session =>
     ({
@@ -58,11 +70,18 @@ describe('SessionsService', () => {
             createQueryBuilder: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Beneficiary),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get(SessionsService);
     sessionRepo = module.get(getRepositoryToken(Session));
+    beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -83,6 +102,7 @@ describe('SessionsService', () => {
 
   describe('create', () => {
     it('should create a session', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       sessionRepo.count.mockResolvedValue(0);
       sessionRepo.create.mockReturnValue(makeSession());
       sessionRepo.save.mockResolvedValue(makeSession());
@@ -100,7 +120,65 @@ describe('SessionsService', () => {
       expect(sessionRepo.save).toHaveBeenCalled();
     });
 
+    it('should scope the beneficiary lookup to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      sessionRepo.count.mockResolvedValue(0);
+      sessionRepo.create.mockReturnValue(makeSession());
+      sessionRepo.save.mockResolvedValue(makeSession());
+      sessionRepo.findOne.mockResolvedValue(makeSession());
+
+      await service.create(
+        { beneficiaryId: 'ben-1', specialistId: 'spec-1', startedAt: '2025-06-15T10:00:00Z' } as any,
+        tenantId,
+      );
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-1', tenantId },
+      });
+    });
+
+    it('should throw BadRequestException when beneficiary does not exist', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-missing',
+            specialistId: 'spec-1',
+            startedAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(sessionRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when beneficiary does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-other-tenant',
+            specialistId: 'spec-1',
+            startedAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when beneficiaryId is missing', async () => {
+      await expect(
+        service.create(
+          { specialistId: 'spec-1', startedAt: '2025-06-15T10:00:00Z' } as any,
+          tenantId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
     it('should set sessionNumber based on count', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       sessionRepo.count.mockResolvedValue(5);
       sessionRepo.create.mockReturnValue(makeSession({ sessionNumber: 6 }));
       sessionRepo.save.mockResolvedValue(makeSession({ sessionNumber: 6 }));
@@ -120,6 +198,7 @@ describe('SessionsService', () => {
     });
 
     it('should handle optional endedAt', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       sessionRepo.count.mockResolvedValue(0);
       sessionRepo.create.mockReturnValue(makeSession());
       sessionRepo.save.mockResolvedValue(makeSession());

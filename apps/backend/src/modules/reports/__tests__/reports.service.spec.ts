@@ -4,13 +4,25 @@ import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ReportsService } from '../reports.service';
 import { Report, ReportStatus, ReportType } from '../report.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 
 describe('ReportsService', () => {
   let service: ReportsService;
   let reportRepo: jest.Mocked<Repository<Report>>;
+  let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
 
   const tenantId = 'tenant-1';
+
+  const makeBeneficiary = (overrides: Partial<Beneficiary> = {}): Beneficiary =>
+    ({
+      id: 'ben-1',
+      tenantId,
+      firstName: 'Ahmed',
+      lastName: 'Ali',
+      fileNumber: 'BNF-00001',
+      ...overrides,
+    }) as Beneficiary;
 
   const makeReport = (overrides: Partial<Report> = {}): Report =>
     ({
@@ -61,17 +73,25 @@ describe('ReportsService', () => {
             createQueryBuilder: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Beneficiary),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get(ReportsService);
     reportRepo = module.get(getRepositoryToken(Report));
+    beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
   });
 
   afterEach(() => jest.clearAllMocks());
 
   describe('create', () => {
     it('should create a report', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       reportRepo.create.mockReturnValue(makeReport());
       reportRepo.save.mockResolvedValue(makeReport());
       reportRepo.findOne.mockResolvedValue(makeReport());
@@ -89,7 +109,64 @@ describe('ReportsService', () => {
       expect(reportRepo.save).toHaveBeenCalled();
     });
 
+    it('should scope the beneficiary lookup to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      reportRepo.create.mockReturnValue(makeReport());
+      reportRepo.save.mockResolvedValue(makeReport());
+      reportRepo.findOne.mockResolvedValue(makeReport());
+
+      await service.create(
+        { beneficiaryId: 'ben-1', type: ReportType.PROGRESS, title: 'R' } as any,
+        tenantId,
+        'spec-1',
+      );
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-1', tenantId },
+      });
+    });
+
+    it('should throw BadRequestException when beneficiary does not exist', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-missing',
+            type: ReportType.PROGRESS,
+            title: 'R',
+          } as any,
+          tenantId,
+          'spec-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(reportRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when beneficiary does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-other-tenant',
+            type: ReportType.PROGRESS,
+            title: 'R',
+          } as any,
+          tenantId,
+          'spec-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when beneficiaryId is missing', async () => {
+      await expect(
+        service.create({ type: ReportType.PROGRESS, title: 'R' } as any, tenantId, 'spec-1'),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
     it('should set content to empty object if null', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       reportRepo.create.mockReturnValue(makeReport());
       reportRepo.save.mockResolvedValue(makeReport());
       reportRepo.findOne.mockResolvedValue(makeReport());
@@ -105,6 +182,7 @@ describe('ReportsService', () => {
     });
 
     it('should set status to DRAFT', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       reportRepo.create.mockReturnValue(makeReport());
       reportRepo.save.mockResolvedValue(makeReport());
       reportRepo.findOne.mockResolvedValue(makeReport());

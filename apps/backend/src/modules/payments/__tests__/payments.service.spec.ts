@@ -6,14 +6,26 @@ import { PaymentsService } from '../payments.service';
 import { ServicePackage } from '../service-package.entity';
 import { Subscription, SubscriptionStatus } from '../subscription.entity';
 import { Invoice, PaymentStatus, PaymentMethod } from '../invoice.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
   let packageRepo: jest.Mocked<Repository<ServicePackage>>;
   let subscriptionRepo: jest.Mocked<Repository<Subscription>>;
   let invoiceRepo: jest.Mocked<Repository<Invoice>>;
+  let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
 
   const tenantId = 'tenant-1';
+
+  const makeBeneficiary = (overrides: Partial<Beneficiary> = {}): Beneficiary =>
+    ({
+      id: 'ben-1',
+      tenantId,
+      firstName: 'Ahmed',
+      lastName: 'Ali',
+      fileNumber: 'BNF-00001',
+      ...overrides,
+    }) as Beneficiary;
 
   const makePackage = (overrides: Partial<ServicePackage> = {}): ServicePackage =>
     ({
@@ -111,6 +123,12 @@ describe('PaymentsService', () => {
             createQueryBuilder: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Beneficiary),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -118,6 +136,7 @@ describe('PaymentsService', () => {
     packageRepo = module.get(getRepositoryToken(ServicePackage));
     subscriptionRepo = module.get(getRepositoryToken(Subscription));
     invoiceRepo = module.get(getRepositoryToken(Invoice));
+    beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -171,6 +190,7 @@ describe('PaymentsService', () => {
 
   describe('createSubscription', () => {
     it('should create a subscription', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       subscriptionRepo.findOne.mockResolvedValueOnce(null);
       subscriptionRepo.create.mockReturnValue(makeSubscription());
       subscriptionRepo.save.mockResolvedValue(makeSubscription());
@@ -194,7 +214,91 @@ describe('PaymentsService', () => {
       expect(result).toBeDefined();
     });
 
+    it('should scope the beneficiary lookup to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      subscriptionRepo.findOne.mockResolvedValueOnce(null);
+      subscriptionRepo.create.mockReturnValue(makeSubscription());
+      subscriptionRepo.save.mockResolvedValue(makeSubscription());
+      subscriptionRepo.findOne.mockResolvedValueOnce(makeSubscription());
+      invoiceRepo.count.mockResolvedValue(0);
+      invoiceRepo.create.mockReturnValue(makeInvoice());
+      invoiceRepo.save.mockResolvedValue(makeInvoice());
+
+      await service.createSubscription(
+        {
+          beneficiaryId: 'ben-1',
+          packageId: 'pkg-1',
+          sessionsCount: 12,
+          amountPaid: 500,
+          startDate: '2025-01-01',
+          expiryDate: '2025-04-01',
+        } as any,
+        tenantId,
+        'user-1',
+      );
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-1', tenantId },
+      });
+    });
+
+    it('should throw BadRequestException when beneficiary does not exist', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createSubscription(
+          {
+            beneficiaryId: 'ben-missing',
+            packageId: 'pkg-1',
+            sessionsCount: 12,
+            amountPaid: 500,
+            startDate: '2025-01-01',
+            expiryDate: '2025-04-01',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(subscriptionRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when beneficiary does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createSubscription(
+          {
+            beneficiaryId: 'ben-other-tenant',
+            packageId: 'pkg-1',
+            sessionsCount: 12,
+            amountPaid: 500,
+            startDate: '2025-01-01',
+            expiryDate: '2025-04-01',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when beneficiaryId is missing', async () => {
+      await expect(
+        service.createSubscription(
+          {
+            packageId: 'pkg-1',
+            sessionsCount: 12,
+            amountPaid: 500,
+            startDate: '2025-01-01',
+            expiryDate: '2025-04-01',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
     it('should throw ConflictException if active subscription exists', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       subscriptionRepo.findOne.mockResolvedValueOnce(makeSubscription());
 
       await expect(
@@ -310,6 +414,7 @@ describe('PaymentsService', () => {
 
   describe('createInvoice', () => {
     it('should create an invoice', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       invoiceRepo.count.mockResolvedValue(0);
       invoiceRepo.create.mockReturnValue(makeInvoice());
       invoiceRepo.save.mockResolvedValue(makeInvoice());
@@ -328,7 +433,57 @@ describe('PaymentsService', () => {
       expect(result).toBeDefined();
     });
 
+    it('should scope the beneficiary lookup to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      invoiceRepo.count.mockResolvedValue(0);
+      invoiceRepo.create.mockReturnValue(makeInvoice());
+      invoiceRepo.save.mockResolvedValue(makeInvoice());
+      invoiceRepo.findOne.mockResolvedValue(makeInvoice());
+
+      await service.createInvoice(
+        { beneficiaryId: 'ben-1', amount: 500 } as any,
+        tenantId,
+        'user-1',
+      );
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-1', tenantId },
+      });
+    });
+
+    it('should throw BadRequestException when beneficiary does not exist', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createInvoice(
+          { beneficiaryId: 'ben-missing', amount: 500 } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(invoiceRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when beneficiary does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createInvoice(
+          { beneficiaryId: 'ben-other-tenant', amount: 500 } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when beneficiaryId is missing', async () => {
+      await expect(
+        service.createInvoice({ amount: 500 } as any, tenantId, 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
     it('should set paidAt if status is PAID', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       invoiceRepo.count.mockResolvedValue(0);
       invoiceRepo.create.mockReturnValue(makeInvoice());
       invoiceRepo.save.mockResolvedValue(makeInvoice());
@@ -349,6 +504,7 @@ describe('PaymentsService', () => {
     });
 
     it('should calculate total with discount and tax', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       invoiceRepo.count.mockResolvedValue(0);
       invoiceRepo.create.mockReturnValue(makeInvoice());
       invoiceRepo.save.mockResolvedValue(makeInvoice());

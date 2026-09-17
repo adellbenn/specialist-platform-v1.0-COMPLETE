@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Session, AttendanceStatus } from './session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { CreateSessionDto, UpdateSessionDto, SessionQueryDto } from './dto/session.dto';
 
 @Injectable()
@@ -10,9 +11,20 @@ export class SessionsService {
   constructor(
     @InjectRepository(Session)
     private sessionRepo: Repository<Session>,
+
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepo: Repository<Beneficiary>,
   ) {}
 
   async create(dto: CreateSessionDto, tenantId: string): Promise<Session> {
+    if (!dto.beneficiaryId) {
+      throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const beneficiary = await this.beneficiaryRepo.findOne({
+      where: { id: dto.beneficiaryId, tenantId },
+    });
+    if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+
     const count = await this.sessionRepo.count({
       where: { beneficiaryId: dto.beneficiaryId, tenantId },
     });
