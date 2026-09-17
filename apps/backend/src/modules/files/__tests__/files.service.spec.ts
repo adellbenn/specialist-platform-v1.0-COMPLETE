@@ -1,13 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOperator } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { FilesService } from '../files.service';
 import { FileAttachment, EntityType } from '../file-attachment.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { Report } from '@modules/reports/report.entity';
 import { Session } from '@modules/sessions/session.entity';
+import { UserRole } from '@modules/users/user.entity';
 import { VirusScannerService } from '@common/security/virus-scanner.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -268,6 +273,76 @@ describe('FilesService', () => {
       await service.delete('file-1', tenantId);
       expect(fsMock.unlinkSync).not.toHaveBeenCalled();
       expect(fileRepo.remove).toHaveBeenCalled();
+    });
+  });
+
+  describe('super admin (null tenantId) — regression', () => {
+    it('uploads a file when tenantId is null and stores it under the system dir', async () => {
+      fileRepo.create.mockReturnValue(makeFile({ tenantId: null }));
+      fileRepo.save.mockResolvedValue(makeFile({ tenantId: null }));
+
+      const result = await service.upload(
+        mockMulterFile({ originalname: 'note.txt', mimetype: 'text/plain' }),
+        EntityType.BENEFICIARY,
+        'ben-1',
+        null,
+        'user-1',
+      );
+      expect(result).toBeDefined();
+      expect(fileRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: null }),
+      );
+      const diskPath = fsMock.writeFileSync.mock.calls[0][0] as string;
+      expect(diskPath).toContain(path.join('system', EntityType.BENEFICIARY));
+      expect(diskPath).not.toContain(path.join('tenant-1', EntityType.BENEFICIARY));
+    });
+
+    it('scopes findAll by IsNull() so super admin only sees its own files', async () => {
+      fileRepo.findAndCount.mockResolvedValue([[], 0]);
+      await service.findAll(null);
+      const [opts] = fileRepo.findAndCount.mock.calls[0];
+      expect((opts as any).where.tenantId).toBeInstanceOf(FindOperator);
+      expect((opts as any).where.tenantId).not.toBe(undefined);
+    });
+
+    it('scopes getEntityFiles by IsNull() for super admin', async () => {
+      fileRepo.find.mockResolvedValue([makeFile({ tenantId: null })]);
+      const result = await service.getEntityFiles(EntityType.BENEFICIARY, 'ben-1', null);
+      expect(result).toHaveLength(1);
+      const [opts] = fileRepo.find.mock.calls[0];
+      expect((opts as any).where.tenantId).toBeInstanceOf(FindOperator);
+    });
+
+    it('resolves download path for super-admin files via IsNull scope', async () => {
+      fileRepo.findOne.mockResolvedValue(makeFile({ tenantId: null }));
+      fsMock.existsSync.mockReturnValue(true);
+
+      const result = await service.getFilePath('file-1', null);
+      expect(result.absolutePath).toBeDefined();
+      const [opts] = fileRepo.findOne.mock.calls[0];
+      expect((opts as any).where.tenantId).toBeInstanceOf(FindOperator);
+    });
+
+    it('deletes super-admin files via IsNull scope', async () => {
+      fileRepo.findOne.mockResolvedValue(makeFile({ tenantId: null }));
+      fsMock.existsSync.mockReturnValue(true);
+      fileRepo.remove.mockResolvedValue(makeFile({ tenantId: null }));
+
+      await service.delete('file-1', null);
+      const [opts] = fileRepo.findOne.mock.calls[0];
+      expect((opts as any).where.tenantId).toBeInstanceOf(FindOperator);
+      expect(fsMock.unlinkSync).toHaveBeenCalled();
+    });
+
+    it('forbids specialists from downloading super-admin (tenant-less) files', async () => {
+      fileRepo.findOne.mockResolvedValue(makeFile({ tenantId: null }));
+
+      await expect(
+        service.getFilePath('file-1', 'tenant-2', {
+          role: UserRole.SPECIALIST,
+          id: 'spec-1',
+        } as any),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

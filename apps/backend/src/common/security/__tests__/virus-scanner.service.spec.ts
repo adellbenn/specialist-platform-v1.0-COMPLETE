@@ -130,5 +130,31 @@ describe('VirusScannerService', () => {
         service.scanBuffer(Buffer.from('data'), 'file.txt'),
       ).rejects.toThrow('net error');
     });
+
+    it('sends the INSTREAM payload only after connect (write-ordering regression)', async () => {
+      const payload = Buffer.from('hello clamav');
+      const promise = service.scanBuffer(payload, 'file.txt');
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Regression: the payload used to be queued synchronously after
+      // createConnection — BEFORE the socket connected — so clamd received
+      // garbage ("UNKNOWN COMMAND") and the scan always timed out.
+      expect(netMock._socket.write).not.toHaveBeenCalled();
+
+      netMock._handlers['connect']();
+
+      const writes = netMock._socket.write.mock.calls.map((c: any[]) => c[0]);
+      expect(writes[0].toString()).toBe('zINSTREAM\0');
+
+      const sizeBuf = Buffer.alloc(4);
+      sizeBuf.writeUInt32BE(payload.length, 0);
+      expect(Buffer.compare(writes[1], sizeBuf)).toBe(0);
+      expect(Buffer.compare(writes[2], payload)).toBe(0);
+      expect(writes[3]).toEqual(Buffer.alloc(4));
+
+      netMock._handlers['data'](Buffer.from('OK'));
+      const result = await promise;
+      expect(result.clean).toBe(true);
+    });
   });
 });
