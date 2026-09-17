@@ -10,12 +10,14 @@ import { AppointmentsService } from '../appointments.service';
 import { Appointment, AppointmentStatus, AppointmentType } from '../appointment.entity';
 import { Session } from '@modules/sessions/session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 
 describe('AppointmentsService', () => {
   let service: AppointmentsService;
   let appointmentRepo: jest.Mocked<Repository<Appointment>>;
   let sessionRepo: jest.Mocked<Repository<Session>>;
   let userRepo: jest.Mocked<Repository<User>>;
+  let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
 
   const tenantId = 'tenant-1';
   const specialistId = 'spec-1';
@@ -55,6 +57,9 @@ describe('AppointmentsService', () => {
       beneficiaryId: null,
     }) as unknown as User;
 
+  const makeBeneficiary = (overrides: Partial<Beneficiary> = {}): Beneficiary =>
+    ({ id: beneficiaryId, tenantId, ...overrides }) as Beneficiary;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -89,6 +94,12 @@ describe('AppointmentsService', () => {
             save: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Beneficiary),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -96,6 +107,7 @@ describe('AppointmentsService', () => {
     appointmentRepo = module.get(getRepositoryToken(Appointment));
     sessionRepo = module.get(getRepositoryToken(Session));
     userRepo = module.get(getRepositoryToken(User));
+    beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -129,6 +141,7 @@ describe('AppointmentsService', () => {
     it('should create an appointment successfully', async () => {
       setupConflictQb([]);
       userRepo.findOne.mockResolvedValue(makeUser());
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       appointmentRepo.create.mockReturnValue(makeAppointment());
       appointmentRepo.save.mockResolvedValue(makeAppointment());
       appointmentRepo.findOne.mockResolvedValue(makeAppointment());
@@ -145,7 +158,69 @@ describe('AppointmentsService', () => {
         'user-1',
       );
       expect(result).toBeDefined();
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: beneficiaryId, tenantId },
+      });
       expect(appointmentRepo.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if beneficiary not found in tenant', async () => {
+      setupConflictQb([]);
+      userRepo.findOne.mockResolvedValue(makeUser());
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'nonexistent',
+            specialistId,
+            scheduledAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should reject a beneficiary from another tenant', async () => {
+      setupConflictQb([]);
+      userRepo.findOne.mockResolvedValue(makeUser());
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-other-tenant',
+            specialistId,
+            scheduledAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-other-tenant', tenantId },
+      });
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if beneficiaryId is missing without querying the repository', async () => {
+      setupConflictQb([]);
+      userRepo.findOne.mockResolvedValue(makeUser());
+
+      await expect(
+        service.create(
+          {
+            specialistId,
+            scheduledAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if specialist not found in tenant', async () => {
@@ -191,6 +266,7 @@ describe('AppointmentsService', () => {
     it('should default durationMinutes to 60 for conflict check', async () => {
       setupConflictQb([]);
       userRepo.findOne.mockResolvedValue(makeUser());
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       appointmentRepo.create.mockReturnValue(makeAppointment());
       appointmentRepo.save.mockResolvedValue(makeAppointment());
       appointmentRepo.findOne.mockResolvedValue(makeAppointment());
@@ -442,6 +518,78 @@ describe('AppointmentsService', () => {
       await expect(
         service.update('apt-1', { notes: 'test' } as any, tenantId),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update an appointment when changing beneficiaryId to a valid same-tenant beneficiary', async () => {
+      const apt = makeAppointment();
+      appointmentRepo.findOne.mockResolvedValue(apt);
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary({ id: 'new-ben' }));
+      appointmentRepo.save.mockResolvedValue(apt);
+
+      const result = await service.update('apt-1', { beneficiaryId: 'new-ben' } as any, tenantId);
+
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'new-ben', tenantId },
+      });
+      expect(apt.beneficiaryId).toBe('new-ben');
+      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
+    it('should throw BadRequestException when changing beneficiaryId to one not in the tenant', async () => {
+      const apt = makeAppointment();
+      appointmentRepo.findOne.mockResolvedValue(apt);
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('apt-1', { beneficiaryId: 'nonexistent' } as any, tenantId),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'nonexistent', tenantId },
+      });
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should reject updating beneficiaryId to a beneficiary from another tenant', async () => {
+      const apt = makeAppointment();
+      appointmentRepo.findOne.mockResolvedValue(apt);
+      beneficiaryRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('apt-1', { beneficiaryId: 'ben-other-tenant' } as any, tenantId),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-other-tenant', tenantId },
+      });
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should validate a changed specialist belongs to the same tenant', async () => {
+      const apt = makeAppointment();
+      const newSpecialist = makeUser(UserRole.SPECIALIST);
+      newSpecialist.id = 'spec-2';
+      appointmentRepo.findOne.mockResolvedValue(apt);
+      userRepo.findOne.mockResolvedValue(newSpecialist);
+      appointmentRepo.save.mockResolvedValue(apt);
+
+      await service.update('apt-1', { specialistId: 'spec-2' } as any, tenantId);
+
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'spec-2', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(apt.specialistId).toBe('spec-2');
+      expect(appointmentRepo.save).toHaveBeenCalled();
+    });
+
+    it('should reject updating specialistId to a specialist not in the tenant', async () => {
+      const apt = makeAppointment();
+      appointmentRepo.findOne.mockResolvedValue(apt);
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('apt-1', { specialistId: 'spec-other-tenant' } as any, tenantId),
+      ).rejects.toThrow(BadRequestException);
+      expect(appointmentRepo.save).not.toHaveBeenCalled();
     });
   });
 

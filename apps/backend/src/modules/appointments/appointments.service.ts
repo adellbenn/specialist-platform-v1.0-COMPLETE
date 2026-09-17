@@ -9,6 +9,7 @@ import { Repository, Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual
 import { Appointment, AppointmentStatus, AppointmentType } from './appointment.entity';
 import { Session } from '@modules/sessions/session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import {
   CreateAppointmentDto,
   UpdateAppointmentDto,
@@ -27,6 +28,9 @@ export class AppointmentsService {
 
     @InjectRepository(User)
     private userRepo: Repository<User>,
+
+    @InjectRepository(Beneficiary)
+    private beneficiaryRepo: Repository<Beneficiary>,
   ) {}
 
   // ─── CREATE ───────────────────────────────────────────────
@@ -44,6 +48,14 @@ export class AppointmentsService {
       where: { id: dto.specialistId, tenantId, role: UserRole.SPECIALIST },
     });
     if (!specialist) throw new BadRequestException('الأخصائي غير موجود في هذا المركز');
+
+    if (!dto.beneficiaryId) {
+      throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const beneficiary = await this.beneficiaryRepo.findOne({
+      where: { id: dto.beneficiaryId, tenantId },
+    });
+    if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
 
     const appointment = this.appointmentRepo.create({
       ...dto,
@@ -207,6 +219,20 @@ export class AppointmentsService {
       appointment.status === AppointmentStatus.CANCELLED
     ) {
       throw new BadRequestException('لا يمكن تعديل موعد مكتمل أو ملغي');
+    }
+
+    if (dto.beneficiaryId) {
+      const beneficiary = await this.beneficiaryRepo.findOne({
+        where: { id: dto.beneficiaryId, tenantId },
+      });
+      if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+
+    if (dto.specialistId) {
+      const specialist = await this.userRepo.findOne({
+        where: { id: dto.specialistId, tenantId, role: UserRole.SPECIALIST },
+      });
+      if (!specialist) throw new BadRequestException('الأخصائي غير موجود في هذا المركز');
     }
 
     if (dto.scheduledAt && dto.scheduledAt !== appointment.scheduledAt.toISOString()) {
