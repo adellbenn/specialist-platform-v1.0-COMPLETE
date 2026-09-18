@@ -10,6 +10,7 @@ import { Permission, getAllModuleActions } from './permission.entity';
 import { Role } from './role.entity';
 import { PermissionGroup } from './permission-group.entity';
 import { UserPermission, OverrideType } from './user-permission.entity';
+import { User } from '@modules/users/user.entity';
 import {
   CreateRoleDto,
   UpdateRoleDto,
@@ -21,6 +22,7 @@ import {
 import { AuditLogService } from '@modules/audit-log/audit-log.module';
 import { AuditAction } from '@modules/audit-log/audit-log.entity';
 import { RoleKey, ROLE_PERMISSIONS } from '@common/permissions/role-permissions';
+import { PermissionEngine } from '@common/permissions/permission-engine.service';
 
 @Injectable()
 export class PermissionsService {
@@ -33,8 +35,22 @@ export class PermissionsService {
     private groupRepo: Repository<PermissionGroup>,
     @InjectRepository(UserPermission)
     private userPermRepo: Repository<UserPermission>,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
     private auditLog: AuditLogService,
+    private engine: PermissionEngine,
   ) {}
+
+  /**
+   * Invalidate the cached effective permissions of every user assigned
+   * to the given role — role permission changes affect many users at once.
+   */
+  private async invalidateRoleUsersCache(roleId: string): Promise<void> {
+    const users = await this.userRepo.find({ where: { roleId } });
+    for (const user of users) {
+      await this.engine.invalidateUserPermissions(user.id);
+    }
+  }
 
   // ─── Seed ─────────────────────────────────────────────────────────
   async seedPermissions(): Promise<number> {
@@ -188,6 +204,7 @@ export class PermissionsService {
       newValues: { name: saved.name, permissions: saved.permissions.map((p) => p.id) },
       description: `تحديث دور ${saved.name}`,
     });
+    await this.invalidateRoleUsersCache(id);
     return this.findRole(saved.id);
   }
 
@@ -231,6 +248,7 @@ export class PermissionsService {
       newValues: { isActive: false },
       description: `أرشفة دور ${role.name}`,
     });
+    await this.invalidateRoleUsersCache(role.id);
     return { message: 'تم أرشفة الدور' };
   }
 
@@ -247,6 +265,7 @@ export class PermissionsService {
       oldValues: { name: role.name },
       description: `حذف دور ${role.name}`,
     });
+    await this.invalidateRoleUsersCache(id);
     return { message: 'تم حذف الدور' };
   }
 
@@ -497,6 +516,7 @@ export class PermissionsService {
       },
       description: `تجاوز صلاحية ${perm?.displayName || dto.permissionId} للمستخدم ${dto.userId}`,
     });
+    await this.engine.invalidateUserPermissions(dto.userId);
     return { message: 'تم تحديث التجاوز' };
   }
 
@@ -512,6 +532,7 @@ export class PermissionsService {
       entityId: `${userId}:${permissionId}`,
       description: `إزالة تجاوز صلاحية للمستخدم ${userId}`,
     });
+    await this.engine.invalidateUserPermissions(userId);
     return { message: 'تم إزالة التجاوز' };
   }
 }

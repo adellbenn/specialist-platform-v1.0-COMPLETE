@@ -59,11 +59,18 @@ export class DeviceSessionsService {
     return deviceId;
   }
 
-  async updateLastActive(userId: string, deviceId: string): Promise<void> {
+  async updateLastActive(
+    userId: string,
+    deviceId: string,
+    refreshTokenJti?: string,
+  ): Promise<void> {
     const key = `${DeviceSessionsService.PREFIX}${userId}:${deviceId}`;
     const session = await this.redisService.getJson<DeviceSession>(key);
     if (session) {
       session.lastActive = new Date().toISOString();
+      if (refreshTokenJti) {
+        session.refreshTokenJti = refreshTokenJti;
+      }
       await this.redisService.setJson(key, session, DeviceSessionsService.TTL);
     }
   }

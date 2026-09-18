@@ -11,6 +11,8 @@ import { Permission, PermissionAction, PermissionModule } from '../permission.en
 import { Role } from '../role.entity';
 import { PermissionGroup } from '../permission-group.entity';
 import { UserPermission, OverrideType } from '../user-permission.entity';
+import { User } from '@modules/users/user.entity';
+import { PermissionEngine } from '@common/permissions/permission-engine.service';
 import { AuditLogService } from '@modules/audit-log/audit-log.module';
 import { AuditAction } from '@modules/audit-log/audit-log.entity';
 
@@ -137,6 +139,23 @@ describe('PermissionsService', () => {
         {
           provide: AuditLogService,
           useValue: { log: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            find: jest.fn().mockResolvedValue([]),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            findAndCount: jest.fn(),
+          },
+        },
+        {
+          provide: PermissionEngine,
+          useValue: {
+            invalidateUserPermissions: jest.fn(),
+            invalidateRoleUsers: jest.fn(),
+          },
         },
       ],
     }).compile();

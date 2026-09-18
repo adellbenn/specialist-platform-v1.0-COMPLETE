@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 import { User, UserRole } from '@modules/users/user.entity';
 import { PasswordResetToken } from '../password-reset.entity';
@@ -110,6 +110,7 @@ describe('AuthService', () => {
       delPattern: jest.fn(),
       getJson: jest.fn(),
       setJson: jest.fn(),
+      isAvailable: jest.fn().mockReturnValue(true),
     };
 
     twoFactorService = {
@@ -416,7 +417,22 @@ describe('AuthService', () => {
       expect(deviceSessionsService.updateLastActive).toHaveBeenCalledWith(
         'user-1',
         'device-hash-16',
+        'mock-uuid-1234',
       );
+    });
+
+    it('should NOT treat Redis outage as token reuse', async () => {
+      jwtService.verify.mockReturnValue(mockRefreshPayload);
+      userRepo.findOne.mockResolvedValue(mockUser());
+      redisService.isAvailable.mockReturnValue(false);
+
+      await expect(
+        service.refreshToken({ refreshToken: 'token' }),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      expect(redisService.get).not.toHaveBeenCalled();
+      expect(redisService.delPattern).not.toHaveBeenCalledWith('refresh:user-1:*');
+      expect(deviceSessionsService.revokeAllSessions).not.toHaveBeenCalled();
     });
 
     it('should skip Redis validation if no jti', async () => {
@@ -485,6 +501,34 @@ describe('AuthService', () => {
       await service.revokeSession('user-1', 'device-1');
 
       expect(deviceSessionsService.revokeSession).toHaveBeenCalledWith('user-1', 'device-1');
+    });
+
+    it('should also delete the refresh token bound to the device session', async () => {
+      deviceSessionsService.getActiveSessions.mockResolvedValue([
+        {
+          deviceId: 'device-1',
+          userAgent: 'UA',
+          ip: 'IP',
+          lastActive: '2024-01-01T00:00:00.000Z',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          refreshTokenJti: 'jti-xyz',
+        },
+      ]);
+
+      await service.revokeSession('user-1', 'device-1');
+
+      expect(deviceSessionsService.revokeSession).toHaveBeenCalledWith('user-1', 'device-1');
+      expect(redisService.del).toHaveBeenCalledWith('refresh:user-1:jti-xyz');
+    });
+
+    it('should skip refresh token deletion when session has no jti', async () => {
+      deviceSessionsService.getActiveSessions.mockResolvedValue([]);
+
+      await service.revokeSession('user-1', 'device-1');
+
+      expect(redisService.del).not.toHaveBeenCalledWith(
+        expect.stringMatching(/^refresh:user-1:/),
+      );
     });
   });
 

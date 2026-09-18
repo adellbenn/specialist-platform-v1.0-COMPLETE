@@ -5,6 +5,8 @@ import { UsersService } from '../users.service';
 import { User, UserRole } from '../user.entity';
 import { Role } from '@modules/permissions/role.entity';
 import { PermissionsService } from '@modules/permissions/permissions.service';
+import { PermissionEngine } from '@common/permissions/permission-engine.service';
+import { AuthService } from '@modules/auth/auth.service';
 
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
@@ -67,6 +69,8 @@ describe('UsersService', () => {
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(Role), useValue: roleRepo },
         { provide: PermissionsService, useValue: permissionsService },
+        { provide: PermissionEngine, useValue: { invalidateUserPermissions: jest.fn() } },
+        { provide: AuthService, useValue: { revokeAllUserAccess: jest.fn(), invalidateUserCache: jest.fn() } },
       ],
     }).compile();
 

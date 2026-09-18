@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -189,6 +190,15 @@ export class AuthService {
 
       // Validate against Redis if jti exists and Redis is available
       if (payload.jti) {
+        if (!this.redisService.isAvailable()) {
+          this.logger.warn(
+            `Redis unavailable during refresh for user ${payload.sub} — refusing to classify as reuse`,
+          );
+          throw new ServiceUnavailableException(
+            'خدمة الجلسات غير متاحة حالياً، يرجى المحاولة لاحقاً',
+          );
+        }
+
         const stored = await this.redisService.get(
           `${AuthService.REFRESH_TOKEN_PREFIX}${payload.sub}:${payload.jti}`,
         );
@@ -216,12 +226,17 @@ export class AuthService {
       // Update device session
       if (userAgent && ip) {
         const deviceId = this.deviceSessionsService.generateDeviceId(userAgent, ip);
-        await this.deviceSessionsService.updateLastActive(user.id, deviceId);
+        await this.deviceSessionsService.updateLastActive(
+          user.id,
+          deviceId,
+          tokens.refreshTokenJti,
+        );
       }
 
       return { ...tokens, user: this.sanitizeUser(user) };
     } catch (err) {
       if (err instanceof UnauthorizedException) throw err;
+      if (err instanceof ServiceUnavailableException) throw err;
       throw new UnauthorizedException('رمز التحديث منتهي الصلاحية أو غير صالح');
     }
   }
@@ -253,6 +268,24 @@ export class AuthService {
   async logoutAll(userId: string): Promise<void> {
     await this.revokeAllUserTokens(userId);
     await this.deviceSessionsService.revokeAllSessions(userId);
+    await this.invalidateUserCache(userId);
+  }
+
+  /**
+   * Revoke every refresh token, device session and cached user record
+   * for the given user. Used after password change/reset, deactivation or removal.
+   */
+  async revokeAllUserAccess(userId: string): Promise<void> {
+    await this.revokeAllUserTokens(userId);
+    await this.deviceSessionsService.revokeAllSessions(userId);
+    await this.invalidateUserCache(userId);
+  }
+
+  /**
+   * Invalidate the cached user record so the next request reloads it from the DB.
+   */
+  async invalidateUserCache(userId: string): Promise<void> {
+    await this.redisService.del(`user:${userId}`);
   }
 
   async getActiveSessions(userId: string) {
@@ -260,10 +293,18 @@ export class AuthService {
   }
 
   async revokeSession(userId: string, deviceId: string) {
-    await this.deviceSessionsService.revokeSession(userId, deviceId);
-    // Also revoke the refresh token associated with this session
     const sessions = await this.deviceSessionsService.getActiveSessions(userId);
-    // Session already removed from Redis by revokeSession
+    const session = sessions.find((s) => s.deviceId === deviceId);
+
+    await this.deviceSessionsService.revokeSession(userId, deviceId);
+
+    // Revoke the refresh token bound to this device session as well —
+    // otherwise deleting the session alone still leaves the refresh token usable.
+    if (session?.refreshTokenJti) {
+      await this.redisService.del(
+        `${AuthService.REFRESH_TOKEN_PREFIX}${userId}:${session.refreshTokenJti}`,
+      );
+    }
   }
 
   async updateTheme(userId: string, theme: string): Promise<void> {
@@ -303,7 +344,10 @@ export class AuthService {
       user.mustChangePassword = false;
     }
     await this.userRepository.save(user);
-    await this.invalidateUserCache(userId);
+
+    // Changing the password invalidates every existing session —
+    // old refresh tokens must no longer be accepted.
+    await this.revokeAllUserAccess(userId);
   }
 
   async getProfile(userId: string) {
@@ -371,6 +415,9 @@ export class AuthService {
     resetToken.usedAt = new Date();
     await this.resetTokenRepository.save(resetToken);
 
+    // A password reset must terminate all existing sessions and refresh tokens.
+    await this.revokeAllUserAccess(resetToken.user.id);
+
     return { message: 'تم إعادة تعيين كلمة المرور بنجاح' };
   }
 
@@ -434,10 +481,6 @@ export class AuthService {
       default:
         return 7 * 24 * 60 * 60;
     }
-  }
-
-  private async invalidateUserCache(userId: string): Promise<void> {
-    await this.redisService.del(`user:${userId}`);
   }
 
   private sanitizeUser(user: User) {

@@ -13,6 +13,8 @@ import { User, UserRole } from './user.entity';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto/user.dto';
 import { PermissionsService } from '@modules/permissions/permissions.service';
 import { Role } from '@modules/permissions/role.entity';
+import { PermissionEngine } from '@common/permissions/permission-engine.service';
+import { AuthService } from '@modules/auth/auth.service';
 import * as crypto from 'crypto';
 
 /** ترتيب الأدوار للتحكم في سلسلة الصلاحيات (الأعلى يقدر يدير الأقل أو المساوي) */
@@ -36,6 +38,8 @@ export class UsersService implements OnModuleInit {
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     private permissionsService: PermissionsService,
+    private engine: PermissionEngine,
+    private authService: AuthService,
   ) {}
 
   async onModuleInit() {
@@ -180,6 +184,10 @@ export class UsersService implements OnModuleInit {
     // لا يمكن تعديل مستخدم أعلى في السلسلة
     if (requestingUser) this.assertCanManageUser(requestingUser, user);
 
+    const newRole = dto.role;
+    const roleChanged = newRole != null && newRole !== user.role;
+    const passwordChanged = !!dto.password;
+
     if (dto.password) {
       user.passwordHash = await User.hashPassword(dto.password);
     }
@@ -189,12 +197,14 @@ export class UsersService implements OnModuleInit {
       if (existing) throw new ConflictException('البريد الإلكتروني مستخدم مسبقاً');
     }
 
-    if (dto.role && dto.role !== user.role) {
-      // لا يمكن رفع/خفض دور لأعلى من دور المستدعي
-      if (requestingUser) this.assertCanAssignRole(requestingUser.role, dto.role);
-      user.role = dto.role;
-      const role = await this.roleRepository.findOne({ where: { name: dto.role } });
-      if (role) user.roleId = role.id;
+    if (roleChanged) {
+      // لا يمكن رفع/خفض دور أعلى من دور المستدعي
+      if (requestingUser && newRole) this.assertCanAssignRole(requestingUser.role, newRole);
+      if (newRole) {
+        user.role = newRole;
+        const role = await this.roleRepository.findOne({ where: { name: newRole } });
+        if (role) user.roleId = role.id;
+      }
     }
 
     Object.assign(user, {
@@ -204,14 +214,40 @@ export class UsersService implements OnModuleInit {
       ...(dto.phone && { phone: dto.phone }),
     });
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+
+    // Role change invalidates cached role-based decisions
+    if (roleChanged) {
+      await this.engine.invalidateUserPermissions(id);
+    }
+
+    // Password change by an administrator must terminate existing sessions
+    if (passwordChanged) {
+      await this.authService.revokeAllUserAccess(id);
+    } else if (roleChanged) {
+      await this.authService.invalidateUserCache(id);
+    }
+
+    return saved;
   }
 
   async toggleActive(id: string, tenantId?: string, requestingUser?: User): Promise<User> {
     const user = await this.findOne(id, tenantId);
     if (requestingUser) this.assertCanManageUser(requestingUser, user);
+    const wasActive = user.isActive;
     user.isActive = !user.isActive;
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+
+    // Deactivation must immediately terminate every session and
+    // invalidate cached state; reactivation only clears stale cache entries.
+    await this.engine.invalidateUserPermissions(id);
+    if (wasActive && !user.isActive) {
+      await this.authService.revokeAllUserAccess(id);
+    } else {
+      await this.authService.invalidateUserCache(id);
+    }
+
+    return saved;
   }
 
   async remove(id: string, tenantId?: string, requestingUser?: User): Promise<void> {
@@ -220,6 +256,8 @@ export class UsersService implements OnModuleInit {
     // Soft delete — تعطيل بدلاً من الحذف
     user.isActive = false;
     await this.userRepository.save(user);
+    await this.authService.revokeAllUserAccess(id);
+    await this.engine.invalidateUserPermissions(id);
   }
 
   // ─── Preferences ─────────────────────────────────────────────
