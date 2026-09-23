@@ -72,4 +72,5 @@ backups/
 infrastructure/scripts/*.cjs
 infrastructure/scripts/*.mjs
 infrastructure/scripts/list-*.cjs
+infrastructure/scripts/tmp/
 
