@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, UserCheck, UserCircle, Calendar, FileText,
   CreditCard, Bell, Settings, LogOut, Menu, User, Lock, Globe, Moon,
   Building2, ChevronDown, BarChart3, FolderOpen,
-  Eye, Search, Shield, Clock, Palette, TrendingUp, ClipboardList,
+  Eye, Search, Shield, Clock, TrendingUp, ClipboardList,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { usePermissionsStore } from '@/store/permissions.store';
@@ -16,8 +16,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { GlobalSearch } from '@/components/shared/global-search';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { ThemeSync } from '@/components/ui/theme-sync';
-import { ThemeCustomizer } from '@/components/theme/theme-customizer';
-import { useThemeCustomizer } from '@/store/theme-customizer.store';
+
 import { ROLE_LABELS, UserRole } from '@/types';
 import { useTranslation, LanguageProvider } from '@/lib/i18n';
 import toast from 'react-hot-toast';
@@ -366,7 +365,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden" dir={dir} style={{ backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
       <ThemeSync />
-      <ThemeCustomizer />
 
       {/* Desktop Sidebar */}
       {!sidebarCollapsed && (
@@ -440,16 +438,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-center w-10 h-10 rounded-[10px] flex-shrink-0">
               <ThemeSwitcher variant="icon" />
             </div>
-
-            {/* Theme Customizer */}
-            <button
-              onClick={() => useThemeCustomizer.getState().toggleOpen()}
-              className="flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
-              style={{ color: 'var(--text-secondary)' }}
-              title="مخصص السمات"
-            >
-              <Palette size={18} />
-            </button>
 
             {/* Notifications */}
             <Link href="/dashboard/notifications" aria-label="الإشعارات"
