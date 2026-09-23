@@ -67,3 +67,9 @@ backups/
 *.pem
 *.key
 *.cert
+
+# ─── Admin/Diagnostic Scripts (أدوات مؤقتة لا تُلتزم) ──
+infrastructure/scripts/*.cjs
+infrastructure/scripts/*.mjs
+infrastructure/scripts/list-*.cjs
+
