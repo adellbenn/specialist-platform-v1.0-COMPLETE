@@ -25,7 +25,7 @@ describe('common/permissions/index', () => {
 
   it('exports DISABLED_ROLES set', () => {
     expect(perms.DISABLED_ROLES).toBeDefined();
-    expect(perms.DISABLED_ROLES.has('accountant')).toBe(true);
+    expect(perms.DISABLED_ROLES.has('accountant')).toBe(false);
   });
 
   it('roleHasPermission works for super_admin', () => {
@@ -38,8 +38,8 @@ describe('common/permissions/index', () => {
     expect(perms2.length).toBeGreaterThan(0);
   });
 
-  it('getPermissionsForRole returns empty for disabled role', () => {
+  it('getPermissionsForRole returns permissions for enabled accountant', () => {
     const perms3 = perms.getPermissionsForRole('accountant');
-    expect(perms3).toEqual([]);
+    expect(perms3.length).toBeGreaterThan(0);
   });
 });

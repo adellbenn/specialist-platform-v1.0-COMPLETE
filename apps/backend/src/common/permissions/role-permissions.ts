@@ -20,7 +20,7 @@ export type RoleKey =
   | 'beneficiary';
 
 /** الأدوار المعطّلة — لا يُسمح لها بأي صلاحية */
-export const DISABLED_ROLES: Set<RoleKey> = new Set(['accountant']);
+export const DISABLED_ROLES: Set<RoleKey> = new Set();
 
 export const ROLE_PERMISSIONS: Record<RoleKey, Permission[]> = {
   // ─────────────────────────────────────────────────────────────

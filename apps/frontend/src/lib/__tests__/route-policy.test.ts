@@ -64,4 +64,40 @@ describe('getRoutePolicy', () => {
     expect(getRoutePolicy('/dashboard/admin/users')?.anyRole).not.toContain('accountant');
     expect(getRoutePolicy('/dashboard/admin/audit')?.anyRole).not.toContain('accountant');
   });
+
+  it('يمنح المستفيد لوحة المنصة — بلا حلقة تحويل عند الجذر', () => {
+    const dash = getRoutePolicy('/dashboard');
+    expect(dash?.anyRole).toContain('beneficiary');
+  });
+
+  it('يمنع المستفيد من /users و /settings دون تحويل إلى /auth/login', () => {
+    for (const r of ['/dashboard/users', '/dashboard/settings']) {
+      const p = getRoutePolicy(r);
+      expect(p?.anyRole, r).not.toContain('beneficiary');
+      expect(p?.redirectTo, r).toBe('/dashboard');
+      expect(p?.redirectTo, r).not.toBe('/auth/login');
+    }
+  });
+
+  it('يمنح المستفيد مسارات بياناته فقط ويحرم الإدارة والمالية', () => {
+    for (const r of ['/dashboard/appointments', '/dashboard/appointments/a-1', '/dashboard/notifications', '/dashboard/profile']) {
+      expect(getRoutePolicy(r)?.anyRole, r).toContain('beneficiary');
+    }
+    for (const r of [
+      '/dashboard/users',
+      '/dashboard/specialists',
+      '/dashboard/beneficiaries',
+      '/dashboard/sessions',
+      '/dashboard/reports',
+      '/dashboard/files',
+      '/dashboard/payments',
+      '/dashboard/settings',
+      '/dashboard/admin/users',
+      '/dashboard/audit',
+      '/dashboard/analytics',
+      '/dashboard/search',
+    ]) {
+      expect(getRoutePolicy(r)?.anyRole, r).not.toContain('beneficiary');
+    }
+  });
 });

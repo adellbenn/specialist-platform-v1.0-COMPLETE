@@ -21,10 +21,12 @@ const ALL_ROLES: UserRole[] = ['super_admin', 'center_manager', 'supervisor', 's
 const STAFF: UserRole[] = ['super_admin', 'center_manager', 'supervisor', 'specialist', 'receptionist'];
 const CLINICAL: UserRole[] = ['super_admin', 'center_manager', 'supervisor', 'specialist'];
 const MANAGERS: UserRole[] = ['super_admin', 'center_manager'];
+/** المستفيد — يرى لوحة المنصة على بياناته فقط (قراءة + ملفه الشخصي) */
+const SELF: UserRole[] = ['beneficiary'];
 
 const ROUTE_POLICIES: Record<string, RoutePolicy> = {
-  /* ── الجذر: كل مستخدم مصادَق — غير ذلك يدخل في حلقة تحويل عند تسجيل الدخول ── */
-  '/dashboard': { anyRole: ALL_ROLES, redirectTo: '/auth/login' },
+  /* ── الجذر: كل مستخدم مصادَق (بما فيه المستفيد) — غير ذلك يدخل في حلقة تحويل عند تسجيل الدخول ── */
+  '/dashboard': { anyRole: [...ALL_ROLES, ...SELF], redirectTo: '/auth/login' },
 
   /* ── المستخدمون ── */
   '/dashboard/users': { anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' },
@@ -38,8 +40,8 @@ const ROUTE_POLICIES: Record<string, RoutePolicy> = {
   '/dashboard/beneficiaries/:id/edit': { permission: 'beneficiary:update', redirectTo: '/dashboard/beneficiaries' },
 
   /* ── المواعيد ── */
-  '/dashboard/appointments': { anyRole: STAFF, redirectTo: '/dashboard' },
-  '/dashboard/appointments/:id': { anyRole: STAFF, redirectTo: '/dashboard/appointments' },
+  '/dashboard/appointments': { anyRole: [...STAFF, ...SELF], redirectTo: '/dashboard' },
+  '/dashboard/appointments/:id': { anyRole: [...STAFF, ...SELF], redirectTo: '/dashboard/appointments' },
   '/dashboard/appointments/new': { permission: 'appointment:create', redirectTo: '/dashboard/appointments' },
 
   /* ── الجلسات ── */
@@ -64,10 +66,10 @@ const ROUTE_POLICIES: Record<string, RoutePolicy> = {
   '/dashboard/files': { anyRole: ['super_admin', 'center_manager', 'supervisor', 'specialist'], redirectTo: '/dashboard' },
   '/dashboard/audit': { anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' },
   '/dashboard/analytics': { anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' },
-  '/dashboard/notifications': { anyRole: STAFF, redirectTo: '/dashboard' },
+  '/dashboard/notifications': { anyRole: [...STAFF, ...SELF], redirectTo: '/dashboard' },
   '/dashboard/search': { anyRole: ALL_ROLES, redirectTo: '/dashboard' },
   '/dashboard/profile': {
-    anyRole: ['super_admin', 'center_manager', 'supervisor', 'specialist', 'receptionist', 'accountant'],
+    anyRole: ['super_admin', 'center_manager', 'supervisor', 'specialist', 'receptionist', 'accountant', 'beneficiary'],
     redirectTo: '/dashboard',
   },
   '/dashboard/settings': {

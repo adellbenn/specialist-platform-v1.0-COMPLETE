@@ -45,15 +45,21 @@ describe('RolePermissions', () => {
   });
 
   describe('accountant', () => {
-    it('should be disabled — all permission checks return false', () => {
-      expect(roleHasPermission('accountant', Permission.PAYMENT_VIEW)).toBe(false);
-      expect(roleHasPermission('accountant', Permission.PAYMENT_CREATE)).toBe(false);
+    it('should be enabled — payment permissions return true', () => {
+      expect(roleHasPermission('accountant', Permission.PAYMENT_VIEW)).toBe(true);
+      expect(roleHasPermission('accountant', Permission.PAYMENT_CREATE)).toBe(true);
+      expect(roleHasPermission('accountant', Permission.PAYMENT_UPDATE)).toBe(true);
+    });
+
+    it('should NOT have user management permissions', () => {
       expect(roleHasPermission('accountant', Permission.USER_VIEW)).toBe(false);
       expect(roleHasPermission('accountant', Permission.USER_CREATE)).toBe(false);
     });
 
-    it('getPermissionsForRole should return empty array', () => {
-      expect(getPermissionsForRole('accountant')).toEqual([]);
+    it('getPermissionsForRole should return non-empty array', () => {
+      const perms = getPermissionsForRole('accountant');
+      expect(perms.length).toBeGreaterThan(0);
+      expect(perms).toContain(Permission.PAYMENT_VIEW);
     });
   });
 
