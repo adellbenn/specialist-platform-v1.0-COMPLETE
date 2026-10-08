@@ -8,7 +8,9 @@ import toast from 'react-hot-toast';
 
 export function useBeneficiariesList(query: BeneficiaryQuery, page: number) {
   const params = { ...query, page };
-  const url = `/beneficiaries?${buildQueryString(params)}`;
+  /* buildQueryString تُسبق بـ'?' بنفسها — إضافته هنا ينتج '??' ويفسّره
+     الخادم كمفتاح باسم '?'. services/ تستخدم `${BASE}${...}` للسبب نفسه. */
+  const url = `/beneficiaries${buildQueryString(params)}`;
   const q = useFetch<Beneficiary[]>(
     queryKeys.beneficiaries.all(params),
     url,

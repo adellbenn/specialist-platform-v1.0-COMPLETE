@@ -7,7 +7,7 @@ import { BeneficiaryQuery } from '@/services/beneficiaries.service';
 import { useBeneficiariesList, useBeneficiaryStats } from '@/hooks/queries/use-beneficiaries';
 import { BeneficiaryCard } from '@/components/beneficiaries/beneficiary-card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageLoader } from '@/components/ui/spinner';
+import { ListSkeleton } from '@/components/ui/skeleton';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import {
   BeneficiaryStatus,
@@ -147,8 +147,9 @@ export default function BeneficiariesPageClient() {
         </div>
       </div>
 
+      {/* skeleton للشبكة فقط — الترويسة والمرشّحات أعلاه تبقى ظاهرة */}
       {isLoading ? (
-        <PageLoader />
+        <ListSkeleton />
       ) : beneficiaries.length === 0 ? (
         <EmptyState
           icon={Users}

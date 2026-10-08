@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowRight, Edit, CheckCircle, Send, Archive,
@@ -11,7 +12,6 @@ import { reportsService }       from '@/services/reports.service';
 import { FilesList }            from '@/components/reports/files-list';
 import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge }                from '@/components/ui/badge';
-import { PageLoader }           from '@/components/ui/spinner';
 import { PermissionGate }       from '@/components/auth/permission-gate';
 import { usePermissions }       from '@/hooks/use-permissions';
 import {
@@ -122,7 +122,7 @@ export default function ReportDetailPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!report)  return null;
 
   const r = report;

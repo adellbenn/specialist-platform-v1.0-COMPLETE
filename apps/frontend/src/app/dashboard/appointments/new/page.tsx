@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowRight, Save, Loader2, Calendar } from 'lucide-react';
+import { ArrowRight, Save, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouteGuard }       from '@/components/auth/route-guard';
 import { Card, SectionHeader } from '@/components/ui/card';
 import { Input }               from '@/components/ui/input';
 import { Select }              from '@/components/ui/select';
 import { Textarea }            from '@/components/ui/textarea';
+import { Button }              from '@/components/ui/button';
 import { appointmentsService } from '@/services/appointments.service';
 import { beneficiariesService } from '@/services/beneficiaries.service';
 import apiClient               from '@/lib/api-client';
@@ -52,7 +53,7 @@ export default function NewAppointmentPage() {
   const [beneficiaries, setBeneficiaries] = useState<Array<{ value: string; label: string }>>([]);
   const [specialists, setSpecialists]     = useState<Array<{ value: string; label: string }>>([]);
 
-  const { register, handleSubmit, formState: { errors, isDirty } } =
+  const { register, handleSubmit, formState: { errors } } =
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: { durationMinutes: 60, type: 'follow_up' },
@@ -99,9 +100,7 @@ export default function NewAppointmentPage() {
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 rounded-2xl hover:bg-surface-secondary text-text-secondary transition">
-          <ArrowRight size={18} />
-        </button>
+        <Button variant="ghost" icon={ArrowRight} onClick={() => router.back()} aria-label="رجوع" />
         <div>
           <h1 className="text-xl font-bold text-text-primary">موعد جديد</h1>
           <p className="text-sm text-text-muted mt-0.5">جدولة موعد لمستفيد</p>
@@ -128,8 +127,8 @@ export default function NewAppointmentPage() {
               error={errors.specialistId?.message}
               {...register('specialistId')}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
                 <Input
                   label="التاريخ والوقت"
                   type="datetime-local"
@@ -169,16 +168,12 @@ export default function NewAppointmentPage() {
         </Card>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => router.back()}
-            className="px-5 py-2.5 text-sm border border-border rounded-lg hover:bg-surface-secondary">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             إلغاء
-          </button>
-          <button type="submit" disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-60 transition">
-            {saving
-              ? <><Loader2 size={15} className="animate-spin" /> جاري الحفظ...</>
-              : <><Save size={15} /> حفظ الموعد</>}
-          </button>
+          </Button>
+          <Button type="submit" icon={Save} loading={saving}>
+            حفظ الموعد
+          </Button>
         </div>
       </form>
     </div>

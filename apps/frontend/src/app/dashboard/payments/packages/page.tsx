@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Plus, Edit3, ToggleLeft, ToggleRight } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Card } from '@/components/ui/card';
 import { useRouteGuard } from '@/components/auth/route-guard';
@@ -162,7 +162,7 @@ export default function PackagesPage() {
       )}
 
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : packages.length === 0 && !showForm ? (
         <EmptyState icon={Package} title="لا توجد باقات" description="أنشئ باقات خدمية لتسهيل الاشتراكات"
           action={

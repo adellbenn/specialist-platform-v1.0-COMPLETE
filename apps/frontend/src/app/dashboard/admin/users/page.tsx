@@ -7,7 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
 import { usersService } from '@/services/users.service';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
@@ -81,7 +81,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <TableSkeleton />;
 
   const selectedUserName = selectedUser
     ? `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() ||
@@ -150,7 +150,7 @@ export default function AdminUsersPage() {
             </div>
 
             {!userPerms ? (
-              <PageLoader />
+              <TableSkeleton />
             ) : (
               <div className="space-y-6">
                 <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)' }}>

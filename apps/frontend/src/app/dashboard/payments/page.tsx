@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouter }           from 'next/navigation';
 import {
   DollarSign, CreditCard, Users, TrendingUp,
@@ -10,7 +11,6 @@ import toast                   from 'react-hot-toast';
 import { paymentsService }     from '@/services/payments.service';
 import { InvoiceCard }         from '@/components/payments/invoice-card';
 import { SubscriptionCard }    from '@/components/payments/subscription-card';
-import { PageLoader }          from '@/components/ui/spinner';
 import { EmptyState }          from '@/components/ui/empty-state';
 import { PermissionGate }      from '@/components/auth/permission-gate';
 import { useRouteGuard }       from '@/components/auth/route-guard';
@@ -24,7 +24,7 @@ import { formatCurrency, cn }  from '@/lib/utils';
 type TabId = 'invoices' | 'subscriptions' | 'packages';
 
 export default function PaymentsPage() {
-  useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
+  useRouteGuard({ anyRole: ['super_admin', 'center_manager', 'accountant'], redirectTo: '/dashboard' });
   const router  = useRouter();
   const [tab, setTab]             = useState<TabId>('invoices');
   const [stats, setStats]         = useState<PaymentStats | null>(null);
@@ -191,7 +191,7 @@ export default function PaymentsPage() {
 
       {/* ─── المحتوى ─── */}
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : (
         <>
           {/* الفواتير */}

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useParams, useRouter }  from 'next/navigation';
 import { ArrowRight, Printer, CheckCircle, RotateCcw } from 'lucide-react';
 import toast                     from 'react-hot-toast';
 import { paymentsService }       from '@/services/payments.service';
 import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge }                 from '@/components/ui/badge';
-import { PageLoader }            from '@/components/ui/spinner';
 import { PermissionGate }        from '@/components/auth/permission-gate';
 import { useRouteGuard }         from '@/components/auth/route-guard';
 import {
@@ -67,7 +67,7 @@ export default function InvoiceDetailPage() {
 
   const handlePrint = () => window.print();
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!invoice) return null;
 
   const inv = invoice;

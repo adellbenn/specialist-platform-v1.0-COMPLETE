@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowRight, Key, Check, X as XIcon, Search, SlidersHorizontal, CheckSquare, XSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 
@@ -83,7 +83,7 @@ export default function RoleDetailPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <TableSkeleton />;
   if (!role) return <p className="text-center py-10" style={{ color: 'var(--text-muted)' }}>الدور غير موجود</p>;
 
   const grouped = permissions.reduce((acc: Record<string, any[]>, p: any) => {

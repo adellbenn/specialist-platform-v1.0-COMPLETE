@@ -1,24 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowRight, CheckCircle, XCircle, AlertCircle,
-  Clock, User, MapPin, FileText, Star, Loader2, Save,
+  Clock, User, FileText, Save,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { appointmentsService, CompleteSessionPayload } from '@/services/appointments.service';
 import {
   Appointment,
   APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS,
-  APPOINTMENT_TYPE_LABELS, ATTENDANCE_LABELS,
+  APPOINTMENT_TYPE_LABELS,
 } from '@/types';
 import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge }          from '@/components/ui/badge';
+import { Button }         from '@/components/ui/button';
+import { Dialog }         from '@/components/ui/dialog';
 import { Textarea }       from '@/components/ui/textarea';
-import { PageLoader }     from '@/components/ui/spinner';
 import { PermissionGate } from '@/components/auth/permission-gate';
-import { formatDateTime, cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 
 const ATTENDANCE_OPTIONS = [
   { value: 'present', label: 'حاضر' },
@@ -37,6 +39,9 @@ export default function AppointmentDetailPage() {
   const [loading, setLoading]         = useState(true);
   const [showCompleteForm, setShowCompleteForm] = useState(autoComplete);
   const [saving, setSaving]           = useState(false);
+  const [cancelOpen, setCancelOpen]   = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [busy, setBusy]               = useState<string | null>(null);
 
   const [sessionForm, setSessionForm] = useState<CompleteSessionPayload>({
     attendance: 'present',
@@ -63,33 +68,43 @@ export default function AppointmentDetailPage() {
   }, [id, router]);
 
   const handleConfirm = async () => {
+    setBusy('confirm');
     try {
       const res = await appointmentsService.confirm(id);
       setAppointment(res.data.data);
       toast.success('تم تأكيد الموعد');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'فشل التأكيد');
+    } finally {
+      setBusy(null);
     }
   };
 
   const handleCancel = async () => {
-    const reason = prompt('سبب الإلغاء (اختياري)') ?? '';
+    setBusy('cancel');
+    setCancelOpen(false);
     try {
-      const res = await appointmentsService.cancel(id, reason);
+      const res = await appointmentsService.cancel(id, cancelReason);
       setAppointment(res.data.data);
+      setCancelReason('');
       toast.success('تم إلغاء الموعد');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'فشل الإلغاء');
+    } finally {
+      setBusy(null);
     }
   };
 
   const handleNoShow = async () => {
+    setBusy('no-show');
     try {
       const res = await appointmentsService.markNoShow(id);
       setAppointment(res.data.data);
       toast.success('تم تسجيل عدم الحضور');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'فشل التسجيل');
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -106,13 +121,14 @@ export default function AppointmentDetailPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!appointment) return null;
 
   const a = appointment;
   const canAct = !['completed', 'cancelled', 'no_show'].includes(a.status);
 
   return (
+    <>
     <div className="max-w-3xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-start gap-3">
@@ -130,7 +146,7 @@ export default function AppointmentDetailPage() {
       </div>
 
       {/* تفاصيل الموعد */}
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card>
           <SectionHeader icon={Clock} title="معلومات الموعد" />
           <div className="space-y-0.5">
@@ -195,27 +211,15 @@ export default function AppointmentDetailPage() {
             <SectionHeader icon={CheckCircle} title="إجراءات الموعد" iconColor="text-primary" />
             <div className="flex flex-wrap gap-2">
               {a.status === 'scheduled' && (
-                <button onClick={handleConfirm}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg transition hover:bg-primary-hover">
-                  <CheckCircle size={15} /> تأكيد الموعد
-                </button>
+                <Button icon={CheckCircle} loading={busy === 'confirm'} disabled={busy !== null} onClick={handleConfirm}>تأكيد الموعد</Button>
               )}
               {['scheduled', 'confirmed'].includes(a.status) && !showCompleteForm && (
-                  <button onClick={() => setShowCompleteForm(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition">
-                  <FileText size={15} /> إتمام وتسجيل الجلسة
-                </button>
+                <Button icon={FileText} disabled={busy !== null} onClick={() => setShowCompleteForm(true)}>إتمام وتسجيل الجلسة</Button>
               )}
               {['scheduled', 'confirmed'].includes(a.status) && (
                 <>
-                  <button onClick={handleNoShow}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm border border-danger/30 text-danger rounded-lg transition hover:bg-danger-light">
-                    <AlertCircle size={15} /> لم يحضر
-                  </button>
-                  <button onClick={handleCancel}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm border border-danger/30 text-danger rounded-lg transition hover:bg-danger-light">
-                    <XCircle size={15} /> إلغاء الموعد
-                  </button>
+                  <Button variant="danger" icon={AlertCircle} loading={busy === 'no-show'} disabled={busy !== null} onClick={handleNoShow}>لم يحضر</Button>
+                  <Button variant="outline" icon={XCircle} className="border-danger/30 text-danger hover:bg-danger-light" disabled={busy !== null} onClick={() => { setCancelReason(''); setCancelOpen(true); }}>إلغاء الموعد</Button>
                 </>
               )}
             </div>
@@ -235,16 +239,15 @@ export default function AppointmentDetailPage() {
               <label className="block text-sm font-medium text-text-primary mb-2">الحضور</label>
               <div className="flex flex-wrap gap-2">
                 {ATTENDANCE_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button"
+                  <Button
+                    key={opt.value}
+                    type="button"
+                    size="sm"
+                    variant={sessionForm.attendance === opt.value ? 'primary' : 'outline'}
                     onClick={() => setSessionForm((p) => ({ ...p, attendance: opt.value }))}
-                    className={cn(
-                      'px-4 py-2 text-sm rounded-lg border transition font-medium',
-                      sessionForm.attendance === opt.value
-                        ? 'bg-primary text-white border-primary'
-                        : 'border-border text-text-secondary hover:bg-surface-secondary',
-                    )}>
+                  >
                     {opt.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -298,20 +301,36 @@ export default function AppointmentDetailPage() {
               onChange={(e) => setSessionForm((p) => ({ ...p, nextSessionPlan: e.target.value }))} />
 
             <div className="flex justify-end gap-3 pt-2 border-t border-border">
-              <button onClick={() => setShowCompleteForm(false)}
-                className="px-5 py-2.5 text-sm border border-border rounded-lg hover:bg-surface-secondary">
-                إلغاء
-              </button>
-              <button onClick={handleComplete} disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-40 transition">
-                {saving
-                  ? <><Loader2 size={15} className="animate-spin" /> جاري الحفظ...</>
-                  : <><Save size={15} /> حفظ الجلسة</>}
-              </button>
+              <Button variant="outline" onClick={() => setShowCompleteForm(false)}>إلغاء</Button>
+              <Button icon={Save} loading={saving} onClick={handleComplete}>حفظ الجلسة</Button>
             </div>
           </div>
         </Card>
       )}
     </div>
+
+    <Dialog
+      open={cancelOpen}
+      onClose={() => setCancelOpen(false)}
+      title="إلغاء الموعد"
+      size="sm"
+      footer={
+        <>
+          <Button variant="outline" disabled={busy !== null} onClick={() => setCancelOpen(false)}>إلغاء</Button>
+          <Button variant="danger" loading={busy === 'cancel'} onClick={handleCancel}>تأكيد الإلغاء</Button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <p className="text-sm text-text-secondary">سيتم إلغاء الموعد، ويمكنك إضافة سبب (اختياري).</p>
+        <Textarea
+          rows={3}
+          placeholder="سبب الإلغاء..."
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+        />
+      </div>
+    </Dialog>
+    </>
   );
 }

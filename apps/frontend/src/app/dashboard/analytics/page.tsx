@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, BarChart3, DollarSign, Users, MapPin, Play, ArrowUpRight, Target } from 'lucide-react';
 import { analyticsService } from '@/services/analytics.service';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 
 const formatCurrency = (n: number) =>
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageLoader />;
+  if (loading) return <TableSkeleton />;
 
   const visitsToday = stats?.appointments.today ?? 0;
   const attendanceRate = stats?.sessions.attendanceRate ?? 0;

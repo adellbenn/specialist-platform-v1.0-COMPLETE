@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { PermissionMatrix } from '@/components/admin/permission-matrix';
 
@@ -43,7 +43,7 @@ export default function AdminPermissionsPage() {
 
   const filteredGrouped = Object.fromEntries(filteredModules);
 
-  if (loading) return <PageLoader />;
+  if (loading) return <TableSkeleton />;
 
   return (
     <div className="space-y-5">

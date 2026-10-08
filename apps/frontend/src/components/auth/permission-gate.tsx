@@ -56,8 +56,12 @@ export function PermissionGate({
   beneficiaryOnly,
   fallback = null,
 }: PermissionGateProps) {
-  const { can, canAny, canAll, hasRole, hasAnyRole, isAdmin, canWrite, isBeneficiary } =
+  const { can, canAny, canAll, hasRole, hasAnyRole, hasAuthority, isAdmin, canWrite, isBeneficiary } =
     usePermissions();
+
+  /* بلا سلطة لا يُعرض المحتوى ولا بديل الرفض: عرض رسالة رفض قبل وصول الجلب
+     طلبٌ خطأ. لا يُعرض البديل إلا حين تقرر سلطاتٍ موثوقة رفضًا فعليًا. */
+  if (!hasAuthority) return null;
 
   if (permission     && !can(permission))              return <>{fallback}</>;
   if (anyPermission  && !canAny(...anyPermission))     return <>{fallback}</>;

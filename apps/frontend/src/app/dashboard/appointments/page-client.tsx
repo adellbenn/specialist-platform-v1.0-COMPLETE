@@ -8,19 +8,20 @@ import toast from 'react-hot-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { appointmentsService, AppointmentQuery } from '@/services/appointments.service';
 import { AppointmentCard } from '@/components/appointments/appointment-card';
-import { PageLoader } from '@/components/ui/spinner';
+import { ListSkeleton, CalendarSkeleton, StatsRowSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { useAppointmentsList, useAppointmentStats } from '@/hooks/queries/use-appointments';
-import { queryKeys } from '@/hooks/queries/query-keys';
-import {
-  AppointmentStatus,
-} from '@/types';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import type { AppointmentStatus } from '@/types';
 
 const AdvancedCalendar = dynamic(
   () => import('@/components/calendar').then((mod) => ({ default: mod.Calendar })),
-  { ssr: false, loading: () => <PageLoader /> },
+  /* PageLoader كان يفرغ الصفحة كاملة عند أول فتح لعرض التقويم؛ الـskeleton
+     يحافظ على ارتفاع التقويم فلا ترتجف الشبكة عند الجلب. */
+  { ssr: false, loading: () => <CalendarSkeleton /> },
 );
 
 type ViewMode = 'calendar' | 'list';
@@ -39,6 +40,7 @@ export default function AppointmentsPageClient() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<ViewMode>('calendar');
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | ''>('');
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; reason: string } | null>(null);
 
   const listQuery: AppointmentQuery = { limit: 50 };
   if (statusFilter) listQuery.status = statusFilter;
@@ -77,9 +79,13 @@ export default function AppointmentsPageClient() {
   const handleConfirm = (id: string) => confirmMutation.mutate(id);
 
   const handleCancel = (id: string) => {
-    const reason = prompt('سبب الإلغاء (اختياري)');
-    if (reason === null) return;
-    cancelMutation.mutate({ id, reason: reason || '' });
+    setCancelTarget({ id, reason: '' });
+  };
+
+  const submitCancel = () => {
+    if (!cancelTarget) return;
+    cancelMutation.mutate({ id: cancelTarget.id, reason: cancelTarget.reason || '' });
+    setCancelTarget(null);
   };
 
   const handleComplete = (id: string) => {
@@ -100,33 +106,34 @@ export default function AppointmentsPageClient() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex bg-surface rounded-lg p-1">
-            <button
+            <Button
+              size="sm"
+              variant={view === 'calendar' ? 'primary' : 'ghost'}
+              icon={Calendar}
               onClick={() => setView('calendar')}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition',
-                view === 'calendar' ? 'bg-background shadow-card text-primary font-medium' : 'text-text-secondary hover:text-text-primary')}
             >
-              <Calendar size={15} /> تقويم
-            </button>
-            <button
+              تقويم
+            </Button>
+            <Button
+              size="sm"
+              variant={view === 'list' ? 'primary' : 'ghost'}
+              icon={List}
               onClick={() => setView('list')}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition',
-                view === 'list' ? 'bg-background shadow-card text-primary font-medium' : 'text-text-secondary hover:text-text-primary')}
             >
-              <List size={15} /> قائمة
-            </button>
+              قائمة
+            </Button>
           </div>
           <PermissionGate permission="appointment:create">
-            <button
-              onClick={() => router.push('/dashboard/appointments/new')}
-              className="flex items-center gap-1.5 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg transition hover:bg-primary-hover"
-            >
-              <Plus size={15} /> موعد جديد
-            </button>
+            <Button icon={Plus} onClick={() => router.push('/dashboard/appointments/new')}>
+              موعد جديد
+            </Button>
           </PermissionGate>
         </div>
       </div>
+      {/* الإحصائيات غير جاهزة: نفس الأبعاد، لا إزاحة */}
+      {!stats && <StatsRowSkeleton />}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
@@ -137,7 +144,7 @@ export default function AppointmentsPageClient() {
           ].map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className={cn('rounded-xl p-3.5 flex items-center gap-3', s.color)}>
+              <div key={s.label} className={`rounded-xl p-3.5 flex items-center gap-3 ${s.color}`}>
                 <Icon size={20} className="opacity-80 flex-shrink-0" />
                 <div>
                   <p className="text-xl font-bold leading-none">{s.value}</p>
@@ -155,34 +162,29 @@ export default function AppointmentsPageClient() {
         <div className="space-y-4">
           <div className="flex gap-2 overflow-x-auto pb-0.5">
             {STATUS_FILTERS.map((f) => (
-              <button
+              <Button
                 key={f.value}
+                size="sm"
+                variant={statusFilter === f.value ? 'primary' : 'outline'}
                 onClick={() => setStatusFilter(f.value as any)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm whitespace-nowrap font-medium transition',
-                  statusFilter === f.value
-                    ? 'bg-primary text-white'
-                    : 'bg-surface text-text-secondary hover:bg-surface-secondary',
-                )}
               >
                 {f.label}
-              </button>
+              </Button>
             ))}
           </div>
 
-          {isLoading ? <PageLoader /> : appointments.length === 0 ? (
+          {/* الجلب هنا بعد تفويض الصلاحيات: skeleton محلي للشبكة فقط،
+                  والترويسة والمرشّحات تبقيان ظاهرتين. */}
+          {isLoading ? <ListSkeleton /> : appointments.length === 0 ? (
             <EmptyState
               icon={Calendar}
               title="لا توجد مواعيد"
               description="لم يتم إنشاء أي مواعيد بعد"
               action={
                 <PermissionGate permission="appointment:create">
-                  <button
-                    onClick={() => router.push('/dashboard/appointments/new')}
-                    className="flex items-center gap-2 bg-primary text-white text-sm px-4 py-2 rounded-lg"
-                  >
-                    <Plus size={14} /> موعد جديد
-                  </button>
+                  <Button icon={Plus} size="sm" onClick={() => router.push('/dashboard/appointments/new')}>
+                    موعد جديد
+                  </Button>
                 </PermissionGate>
               }
             />
@@ -192,6 +194,8 @@ export default function AppointmentsPageClient() {
                 <AppointmentCard
                   key={a.id}
                   appointment={a}
+                  confirming={confirmMutation.isPending}
+                  cancelling={cancelMutation.isPending}
                   onConfirm={handleConfirm}
                   onCancel={handleCancel}
                   onComplete={handleComplete}
@@ -201,6 +205,29 @@ export default function AppointmentsPageClient() {
           )}
         </div>
       )}
+
+      <Dialog
+        open={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        title="إلغاء الموعد"
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>إلغاء</Button>
+            <Button variant="danger" loading={cancelMutation.isPending} onClick={submitCancel}>تأكيد الإلغاء</Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-sm text-text-secondary">سيتم إلغاء الموعد، ويمكنك إضافة سبب (اختياري).</p>
+          <Textarea
+            rows={3}
+            placeholder="سبب الإلغاء..."
+            value={cancelTarget?.reason ?? ''}
+            onChange={(e) => setCancelTarget((prev) => prev ? { ...prev, reason: e.target.value } : prev)}
+          />
+        </div>
+      </Dialog>
     </div>
   );
 }

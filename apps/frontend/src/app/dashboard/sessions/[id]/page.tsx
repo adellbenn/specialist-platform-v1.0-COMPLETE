@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { sessionsService } from '@/services/sessions.service';
 import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -106,7 +106,7 @@ export default function SessionDetailPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!session) return null;
 
   const s = session;

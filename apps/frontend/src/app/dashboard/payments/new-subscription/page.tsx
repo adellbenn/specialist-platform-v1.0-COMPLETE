@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { PermissionGate } from '@/components/auth/permission-gate';
@@ -109,7 +109,7 @@ export default function NewSubscriptionPage() {
     (b) => `${b.firstName} ${b.lastName}`.toLowerCase().includes(search.toLowerCase()),
   );
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="form" />;
 
   return (
     <PermissionGate permission="payment:create" fallback={

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserCheck, Plus, Search, Mail, Phone } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { ROLE_LABELS, UserRole } from '@/types';
@@ -114,7 +114,7 @@ export default function SpecialistsPage() {
       </div>
 
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : specialists.length === 0 ? (
         <EmptyState icon={UserCheck} title="لا يوجد أخصائيون" description="لم يتم إضافة أي أخصائي بعد" />
       ) : (

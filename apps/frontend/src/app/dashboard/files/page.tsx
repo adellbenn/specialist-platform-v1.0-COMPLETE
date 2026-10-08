@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FolderOpen, Upload, Download, Trash2, FileText, Image, File, Link } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { formatDateTime } from '@/lib/utils';
@@ -172,7 +172,7 @@ export default function FilesPage() {
       </div>
 
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : files.length === 0 ? (
         <EmptyState icon={FolderOpen} title="لا توجد ملفات" description="لم يتم رفع أي ملفات بعد"
           action={

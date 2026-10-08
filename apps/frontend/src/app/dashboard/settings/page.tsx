@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Lock, Sun, Bell, Shield, Settings as SettingsIcon, LogOut, Download, Eye } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { useAuthStore } from '@/store/auth.store';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
@@ -176,7 +176,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (!user) return <PageLoader />;
+  if (!user) return <PageSkeleton variant="detail" />;
 
   return (
     <>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,9 +13,11 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { usePermissionsStore } from '@/store/permissions.store';
 import { usePermissions } from '@/hooks/use-permissions';
+import { resolveRoutePolicy } from '@/lib/route-policy';
 import { GlobalSearch } from '@/components/shared/global-search';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { ThemeSync } from '@/components/ui/theme-sync';
+import { PageSkeleton } from '@/components/ui/skeleton';
 
 import { ROLE_LABELS, UserRole } from '@/types';
 import { useTranslation, LanguageProvider } from '@/lib/i18n';
@@ -113,14 +115,14 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'المدفوعات',
         labelEn: 'Payments',
         icon: CreditCard,
-        roles: ['super_admin', 'center_manager'],
+        roles: ['super_admin', 'center_manager', 'accountant'],
       },
       {
         href: '/dashboard/payments/new-invoice',
         label: 'الفواتير',
         labelEn: 'Invoices',
         icon: FileText,
-        roles: ['super_admin', 'center_manager'],
+        roles: ['super_admin', 'center_manager', 'accountant'],
       },
     ],
   },
@@ -253,8 +255,10 @@ const PAGE_TITLES: Record<string, string> = {
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout, refreshUser, _hydrated } = useAuthStore();
-  const { isAdmin, isSuperAdmin, canWrite } = usePermissions();
+  const { isAdmin, isSuperAdmin, canWrite, can, canAny, hasRole, hasAnyRole, hasAuthority } = usePermissions();
   const { fetchPermissions, clearPermissions } = usePermissionsStore();
+  const permissionStatus = usePermissionsStore((s) => s.status);
+  const permissionError  = usePermissionsStore((s) => s.error);
   const { t, locale, setLocale, dir } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -264,20 +268,71 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
+  /* ── نقطة فرض الصلاحيات الوحيدة ──
+     `hasAuthority` صحيحة فقط عندما تكون حالة المخزن `ready` ولصاحبها نفس
+     الهوية والدور المعروضين الآن. أي حالة أخرى — idle / loading / revoked /
+     error أو مالك مختلف — تمنع تركيب children ولا تُطلق طلباتها إطلاقًا.
+
+     `allowedPath` يتتبّع المسار الذي مُنح له، فإذا تغيّر pathname قبل وصول
+     تفويض جديد تُحجب children فورًا ولا تُورَّث موافقة المسار السابق. */
+  const policy = useMemo(() => resolveRoutePolicy(pathname), [pathname]);
+  /* شكل الـskeleton يتبع الصفحة الهدف: تقويم للمواعيد، بطاقات لصفحات أخرى،
+     جدول لبقية القوائم. الشكل غير المطابق يجعل التخطيط يقفز عند أول رسم. */
+  const skeletonVariant = useMemo<'table' | 'list' | 'calendar'>(() => {
+    if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
+    if (pathname.startsWith('/dashboard/beneficiaries') || pathname.startsWith('/dashboard/sessions')) return 'list';
+    return 'table';
+  }, [pathname]);
+  const [allowedPath, setAllowedPath] = useState('');
+  /* `isAuthenticated` شرط مستقل عن `hasAuthority`: `auth` مُخزَّن، فقد يبقى
+     `user` محفوظًا بينما `isAuthenticated` صار false. الاعتماد على
+     `hasAuthority` وحده كان يركّب children في تلك النافذة. */
+  const routeBlocked =
+    !isAuthenticated || !hasAuthority || allowedPath !== pathname;
+
+  const userId   = user?.id ?? null;
+  const userRole = user?.role ?? null;
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  /* جلب واحد لكل (هوية + دور). إضافة الهوية إلى التبعيات هي ما يجعل تغيّر
+     الدور أو الحساب يُبطل السلطة القديمة ويجلب بدلاً منها. */
   useEffect(() => {
     if (!_hydrated) return;
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !userId) {
       clearPermissions();
       router.push('/auth/login');
       return;
     }
     refreshUser();
-    fetchPermissions();
-  }, [_hydrated, isAuthenticated, clearPermissions, refreshUser, fetchPermissions, router]);
+    fetchPermissions({ id: userId, role: userRole ?? '' });
+  }, [_hydrated, isAuthenticated, userId, userRole, clearPermissions, refreshUser, fetchPermissions, router]);
+
+  /* فشل الجلب = لا سلطة. لا محاولة تلقائية: أي إعادة محاولة مؤجَّلة تُنتج
+     حالة مخفية يصعب إثبات حدودها، والفشل العابر لا يستحق طرد المستخدم من
+     الواجهة. البديل زر إعادة صريح — القرار يبقى مرئيًا وقابلًا للقياس.
+     مهمته الوحيدة: إعادة الجلب للهوية نفسها. */
+  const retryPermissions = () => {
+    if (userId) fetchPermissions({ id: userId, role: userRole ?? '' });
+  };
+
+
+  useEffect(() => {
+    /* لا قرار تفويض إطلاقًا قبل وجود جلسة وسلطة: لا تحويل ولا ترخيص */
+    if (!_hydrated || !isAuthenticated || !hasAuthority) { setAllowedPath(''); return; }
+
+    /* لا مسار داخل /dashboard مفتوح افتراضياً: سياسة بلا أدوار = رفض. */
+    let allowed = true;
+    if (policy.permission    && !can(policy.permission))            allowed = false;
+    if (policy.anyPermission && !canAny(...policy.anyPermission))  allowed = false;
+    if (policy.role          && !hasRole(policy.role))              allowed = false;
+    if (policy.anyRole       && !hasAnyRole(...policy.anyRole))    allowed = false;
+
+    setAllowedPath(allowed ? pathname : '');
+    if (!allowed) router.replace(policy.redirectTo ?? '/dashboard');
+  }, [pathname, policy, hasAuthority, can, canAny, hasRole, hasAnyRole, router]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -290,7 +345,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   }, [userMenuOpen]);
 
   const handleLogout = () => {
-    clearPermissions();
+    /* الإبطال يحدث داخل `authStore.logout()` — مصدر واحد لكل مساراتLogout. */
     logout();
     toast.success('تم تسجيل الخروج بنجاح');
     router.push('/auth/login');
@@ -522,7 +577,37 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ backgroundColor: 'var(--background)' }}>
-          {children}
+          {routeBlocked ? (
+            (permissionStatus === 'error' || permissionStatus === 'revoked') ? (
+              /* مسار الفشل/الإبطال: لا نعرض أبدًا children — السلطة مفقودة، فالتركيب رفض افتراضي، لكن يبقى أمام المستخدم مخرج قابل للتعافي. */
+              <div
+                data-testid="permission-error"
+                className="flex flex-col items-center justify-center h-64 text-center gap-3"
+                role="alert"
+              >
+                <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                  تعذّر تحميل صلاحياتك.
+                </p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {permissionError ?? 'لا يمكن تحميل الصلاحيات حاليًا. أعد المحاولة أو سجّل الخروج ثم الدخول من جديد.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={retryPermissions}
+                  className="px-4 py-2 rounded-xl text-sm font-medium"
+                  style={{ backgroundColor: 'var(--primary)', color: '#fff' }}
+                >
+                  إعادة المحاولة
+                </button>
+              </div>
+            ) : (
+              /* الحالة الانتظارية: لا عظمٌ بلا نهاية. تُعرض الصفحة نفسها
+                 (ترويسة + أدوات + محتوى) بدل spinner وسط فراغ، فالتنقل يبدو كاستمرارية بدل قفزة إلى فراغ. */
+              <PageSkeleton variant={skeletonVariant} />
+            )
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

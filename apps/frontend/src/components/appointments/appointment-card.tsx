@@ -8,6 +8,7 @@ import {
   APPOINTMENT_TYPE_LABELS,
 } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { formatDateTime } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,8 @@ interface AppointmentCardProps {
   onCancel?:   (id: string) => void;
   onComplete?: (id: string) => void;
   compact?:    boolean;
+  confirming?: boolean;
+  cancelling?: boolean;
 }
 
 export function AppointmentCard({
@@ -26,6 +29,8 @@ export function AppointmentCard({
   onCancel,
   onComplete,
   compact = false,
+  confirming = false,
+  cancelling = false,
 }: AppointmentCardProps) {
   const isPast      = new Date(a.scheduledAt) < new Date();
   const canAct      = !['completed', 'cancelled', 'no_show'].includes(a.status);
@@ -91,28 +96,39 @@ export function AppointmentCard({
         <PermissionGate permission="appointment:confirm">
           <div className="flex gap-2 mt-3 pt-3 border-t border-border">
             {isScheduled && onConfirm && (
-              <button
+              <Button
+                size="xs"
+                variant="primary"
+                className="flex-1"
+                loading={confirming}
+                disabled={cancelling}
                 onClick={() => onConfirm(a.id)}
-                className="flex-1 text-xs font-medium py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition"
               >
                 تأكيد
-              </button>
+              </Button>
             )}
-            {(isScheduled || isConfirmed) && onComplete && !isPast === false && (
-              <button
+            {(isScheduled || isConfirmed) && onComplete && isPast && (
+              <Button
+                size="xs"
+                variant="success"
+                className="flex-1"
+                disabled={confirming || cancelling}
                 onClick={() => onComplete(a.id)}
-                className="flex-1 text-xs font-medium py-1.5 bg-success text-white rounded-lg hover:opacity-90 transition"
               >
                 إتمام الجلسة
-              </button>
+              </Button>
             )}
             {onCancel && (
-              <button
+              <Button
+                size="xs"
+                variant="outline"
+                className="flex-1 border-danger/30 text-danger hover:bg-danger-light"
+                loading={cancelling}
+                disabled={confirming}
                 onClick={() => onCancel(a.id)}
-                className="flex-1 text-xs font-medium py-1.5 border border-danger/30 text-danger rounded-lg hover:bg-danger-light transition"
               >
                 إلغاء
-              </button>
+              </Button>
             )}
           </div>
         </PermissionGate>

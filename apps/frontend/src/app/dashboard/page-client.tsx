@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDashboardStats, useTodayAppointments } from '@/hooks/queries/use-dashboard';
 import { Card, SectionHeader } from '@/components/ui/card';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { ROLE_LABELS, UserRole } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '@/types';
@@ -23,7 +23,8 @@ export default function DashboardPageClient() {
   const { stats: s, isLoading: statsLoading } = useDashboardStats();
   const { appointments: todayAppts, isLoading: apptsLoading } = useTodayAppointments();
 
-  if (statsLoading || apptsLoading) return <PageLoader />;
+  /* spinner كان يحل محل الصفحة كاملة؛ PageSkeleton يحفظ بنية لوحة التحكم */
+  if (statsLoading || apptsLoading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

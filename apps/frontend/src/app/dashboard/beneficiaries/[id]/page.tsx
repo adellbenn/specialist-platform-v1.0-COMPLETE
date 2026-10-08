@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowRight, Edit, Archive, User, Phone, MapPin,
-  FileText, Calendar, Stethoscope, Users, Plus,
+  FileText, Calendar, Stethoscope, Users, Plus, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { beneficiariesService } from '@/services/beneficiaries.service';
 import { Beneficiary, BeneficiaryFile as BFile, CASE_TYPE_LABELS, CASE_TYPE_COLORS, STATUS_LABELS, STATUS_COLORS, GENDER_LABELS } from '@/types';
 import { Card, SectionHeader, DetailRow } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { GoalsSection } from '@/components/beneficiaries/goals-section';
 import { formatDate, cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ export default function BeneficiaryDetailPage() {
   const [beneficiary, setBeneficiary] = useState<Beneficiary | null>(null);
   const [file, setFile]               = useState<BFile | null>(null);
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(false);
   const [activeTab, setActiveTab]     = useState<TabId>('profile');
   const [archiving, setArchiving]     = useState(false);
 
@@ -39,6 +41,7 @@ export default function BeneficiaryDetailPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const [bRes, fRes] = await Promise.all([
         beneficiariesService.getOne(id),
@@ -48,7 +51,7 @@ export default function BeneficiaryDetailPage() {
       setFile(fRes.data.data);
     } catch {
       toast.error(t('common.error'));
-      router.push('/dashboard/beneficiaries');
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -72,7 +75,25 @@ export default function BeneficiaryDetailPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="detail" />;
+  if (error) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title={t('common.error')}
+        description={t('beneficiaries.load_error_desc') || 'تعذّر تحميل الملف، يرجى المحاولة مرة أخرى.'}
+        action={
+          <button
+            onClick={fetchData}
+            className="px-6 py-2.5 text-sm font-medium text-white rounded-2xl transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            {t('common.retry') || 'إعادة المحاولة'}
+          </button>
+        }
+      />
+    );
+  }
   if (!beneficiary) return null;
 
   return (

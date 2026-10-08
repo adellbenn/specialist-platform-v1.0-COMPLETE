@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm }              from 'react-hook-form';
 import { zodResolver }          from '@hookform/resolvers/zod';
@@ -12,7 +13,6 @@ import { Card, SectionHeader }  from '@/components/ui/card';
 import { Input }                from '@/components/ui/input';
 import { Select }               from '@/components/ui/select';
 import { Textarea }             from '@/components/ui/textarea';
-import { PageLoader }           from '@/components/ui/spinner';
 import { reportsService }       from '@/services/reports.service';
 import { ReportType, REPORT_TYPE_LABELS } from '@/types';
 
@@ -117,7 +117,7 @@ export default function EditReportPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="form" />;
 
   if (notFound) {
     return (

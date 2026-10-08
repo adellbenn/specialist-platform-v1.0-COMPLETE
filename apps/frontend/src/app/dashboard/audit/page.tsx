@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Shield, Filter, Download } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { formatDateTime, cn, toDateKey } from '@/lib/utils';
@@ -187,7 +187,7 @@ export default function AuditLogPage() {
 
       {/* Table */}
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : logs.length === 0 ? (
         <EmptyState
           icon={Shield}

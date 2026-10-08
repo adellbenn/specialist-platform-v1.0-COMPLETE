@@ -14,7 +14,7 @@ import { Card, SectionHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { beneficiariesService } from '@/services/beneficiaries.service';
 import { Beneficiary, BeneficiaryFile } from '@/types';
 import { cn } from '@/lib/utils';
@@ -148,7 +148,7 @@ export default function EditBeneficiaryPage() {
     }
   };
 
-  if (fetching) return <PageLoader />;
+  if (fetching) return <PageSkeleton variant="form" />;
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">

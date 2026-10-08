@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { User, Mail, Phone, Briefcase, Building2, Edit3, Quote, X, Check } from 'lucide-react';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { useAuthStore } from '@/store/auth.store';
 import { Card } from '@/components/ui/card';
@@ -34,7 +34,7 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = useState(false);
 
-  if (!user) return <PageLoader />;
+  if (!user) return <PageSkeleton variant="detail" />;
 
   const fullName = `${user.firstName} ${user.lastName}`;
   const initial = user.firstName?.charAt(0) || user.email?.charAt(0) || '?';

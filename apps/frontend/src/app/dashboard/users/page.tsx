@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Plus, Search, Mail, Phone, ToggleLeft, ToggleRight } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { ROLE_LABELS, UserRole } from '@/types';
@@ -111,7 +111,7 @@ export default function UsersPage() {
       </div>
 
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : users.length === 0 ? (
         <EmptyState icon={Users} title="لا يوجد مستخدمون" description="لم يتم إضافة أي مستخدم بعد" />
       ) : (

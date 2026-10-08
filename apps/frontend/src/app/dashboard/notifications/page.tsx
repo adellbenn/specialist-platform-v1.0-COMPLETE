@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouter }   from 'next/navigation';
 import { Bell, CheckCheck, Loader2, BellOff } from 'lucide-react';
 import toast           from 'react-hot-toast';
@@ -9,7 +10,6 @@ import {
   AppNotification,
   NotificationsMeta,
 } from '@/services/notifications.service';
-import { PageLoader }  from '@/components/ui/spinner';
 import { timeAgo }     from '@/lib/utils';
 import { cn }          from '@/lib/utils';
 
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
 
       {/* List */}
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : notifications.length === 0 ? (
         <div className="bg-[var(--background)] rounded-xl border p-12 text-center" style={{ borderColor: 'var(--border)' }}>
           <BellOff size={40} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />

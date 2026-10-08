@@ -10,7 +10,9 @@ export function useAppointmentsList(
   query: AppointmentQuery,
   options?: { enabled?: boolean },
 ) {
-  const url = `/appointments?${buildQueryString(query)}`;
+  /* buildQueryString تُسبق بـ'?' بنفسها — إضافتها هنا تنتج '??' ويفسّره
+     الخادم كمفتاح باسم '?'. services/ تستخدم `${BASE}${...}` للسبب نفسه. */
+  const url = `/appointments${buildQueryString(query)}`;
   const q = useFetch<Appointment[]>(
     queryKeys.appointments.all(query),
     url,

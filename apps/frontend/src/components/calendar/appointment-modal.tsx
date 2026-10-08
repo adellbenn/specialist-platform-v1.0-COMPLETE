@@ -1,11 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Clock, MapPin, User, FileText, Trash2, Edit3, Save, AlertCircle } from 'lucide-react';
+import { Clock, MapPin, User, FileText, Edit3, Trash2, Save, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Appointment, CALENDAR_DEFAULT_COLORS, APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from '@/types';
 import { appointmentsService } from '@/services/appointments.service';
 import { beneficiariesService } from '@/services/beneficiaries.service';
 import { useCalendar } from './calendar-context';
+import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
 interface AppointmentModalProps {
   mode: 'view' | 'create' | 'edit';
@@ -36,17 +43,29 @@ const TYPE_OPTIONS: Array<{ value: Appointment['type']; label: string }> = [
   { value: 'group', label: 'جلسة جماعية' },
 ];
 
+interface AppointmentFormState {
+  beneficiaryId: string;
+  specialistId: string;
+  type: Appointment['type'];
+  status: Appointment['status'];
+  scheduledAt: string;
+  durationMinutes: number;
+  location: string;
+  notes: string;
+}
+
 export function AppointmentModal({ mode: initialMode, appointment, onClose, defaultDate }: AppointmentModalProps) {
   const { specialists, refreshCalendar, addAppointmentToState, updateAppointmentInState, removeAppointmentFromState } = useCalendar();
   const [mode, setMode] = useState(initialMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<AppointmentFormState>({
     beneficiaryId: appointment?.beneficiaryId || '',
     specialistId: appointment?.specialistId || '',
-    type: appointment?.type || 'initial' as Appointment['type'],
-    status: appointment?.status || 'scheduled' as Appointment['status'],
+    type: appointment?.type || 'initial',
+    status: appointment?.status || 'scheduled',
     scheduledAt: appointment ? toLocalInputValue(appointment.scheduledAt) : (defaultDate ? `${defaultDate}T09:00` : ''),
     durationMinutes: appointment?.durationMinutes || 60,
     location: appointment?.location || '',
@@ -54,34 +73,22 @@ export function AppointmentModal({ mode: initialMode, appointment, onClose, defa
   });
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKey);
-    };
-  }, [onClose]);
-
-  useEffect(() => {
     beneficiariesService.getAll({ limit: 100 })
       .then((res) => setBeneficiaries(res.data.data || []))
       .catch(() => {});
   }, []);
 
-  const updateField = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof AppointmentFormState, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
     try {
       if (mode === 'create') {
-        const res = await appointmentsService.create(form as any);
+        const res = await appointmentsService.create(form);
         addAppointmentToState(res.data.data);
       } else if (mode === 'edit' && appointment) {
-        const res = await appointmentsService.update(appointment.id, form as any);
+        const res = await appointmentsService.update(appointment.id, form);
         updateAppointmentInState(appointment.id, res.data.data);
       }
       onClose();
@@ -93,200 +100,198 @@ export function AppointmentModal({ mode: initialMode, appointment, onClose, defa
     }
   };
 
-  const handleDelete = async () => {
+  const performDelete = async () => {
     if (!appointment) return;
-    if (!window.confirm('هل أنت متأكد من حذف هذا الموعد؟')) return;
     setLoading(true);
     try {
       await appointmentsService.delete(appointment.id);
       removeAppointmentFromState(appointment.id);
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'حدث خطأ');
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء حذف الموعد');
+      setConfirmDelete(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderBackdrop = () => (
-    <div className="fixed inset-0 bg-overlay z-40" onClick={onClose} />
-  );
-
-  const renderModal = (children: React.ReactNode) => (
-    <>
-      {renderBackdrop()}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div role="dialog" aria-modal="true" aria-label="موعد"
-          className="w-full max-w-md rounded-2xl p-6 shadow-modal" style={{ backgroundColor: 'var(--surface-modal)' }} onClick={(e) => e.stopPropagation()}>
-          {children}
-        </div>
-      </div>
-    </>
-  );
+  const modeTitle = mode === 'view' ? 'تفاصيل الموعد' : mode === 'create' ? 'موعد جديد' : 'تعديل الموعد';
 
   if (mode === 'view' && appointment) {
-    const sColors = CALENDAR_DEFAULT_COLORS.status[appointment.status];
-    const time = new Date(appointment.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
-    const date = new Date(appointment.scheduledAt).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-    return renderModal(
+    return (
       <>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>تفاصيل الموعد</h2>
-          <button onClick={onClose} aria-label="إغلاق" className="p-1 rounded hover:bg-[var(--surface)] transition"><X size={18} /></button>
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <User size={16} style={{ color: 'var(--text-muted)' }} />
-            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{appointment.beneficiary?.firstName} {appointment.beneficiary?.lastName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={16} style={{ color: 'var(--text-muted)' }} />
-            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{date} · {time}</span>
-          </div>
-          {appointment.durationMinutes && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>المدة: {appointment.durationMinutes} دقيقة</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: sColors.bg, color: sColors.text }}>
-              {APPOINTMENT_STATUS_LABELS[appointment.status]}
-            </span>
-            {appointment.type && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: CALENDAR_DEFAULT_COLORS.type[appointment.type].bg, color: CALENDAR_DEFAULT_COLORS.type[appointment.type].text }}>
-                {APPOINTMENT_TYPE_LABELS[appointment.type]}
-              </span>
-            )}
-          </div>
-          {appointment.location && (
-            <div className="flex items-center gap-2">
-              <MapPin size={16} style={{ color: 'var(--text-muted)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{appointment.location}</span>
-            </div>
-          )}
-          {appointment.notes && (
-            <div className="flex items-start gap-2">
-              <FileText size={16} style={{ color: 'var(--text-muted)' }} className="mt-0.5 shrink-0" />
-              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{appointment.notes}</p>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2 mt-6 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-          <button onClick={() => setMode('edit')} className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}>
-            <Edit3 size={14} /> تعديل
-          </button>
-          <button onClick={handleDelete} className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)' }}>
-            <Trash2 size={14} /> حذف
-          </button>
-        </div>
+        <Dialog
+          open
+          onClose={onClose}
+          title="تفاصيل الموعد"
+          size="md"
+          footer={
+            <>
+              <Button variant="outline" icon={Edit3} onClick={() => setMode('edit')}>
+                تعديل
+              </Button>
+              <Button variant="danger" icon={Trash2} onClick={() => setConfirmDelete(true)}>
+                حذف
+              </Button>
+            </>
+          }
+        >
+          <ViewContent appointment={appointment} />
+        </Dialog>
+
+        <Dialog
+          open={confirmDelete}
+          onClose={() => !loading && setConfirmDelete(false)}
+          title="حذف الموعد"
+          size="sm"
+          footer={
+            <>
+              <Button variant="outline" disabled={loading} onClick={() => setConfirmDelete(false)}>إلغاء</Button>
+              <Button variant="danger" loading={loading} onClick={performDelete}>حذف</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-text-secondary">
+            هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذا الإجراء.
+          </p>
+        </Dialog>
       </>
     );
   }
 
-  return renderModal(
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-          {mode === 'create' ? 'موعد جديد' : 'تعديل الموعد'}
-        </h2>
-        <button onClick={onClose} aria-label="إغلاق" className="p-1 rounded hover:bg-[var(--surface)] transition"><X size={18} /></button>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 p-3 mb-4 text-sm rounded-lg" style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger-text)' }}>
-          <AlertCircle size={14} /> {error}
-        </div>
-      )}
-
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={modeTitle}
+      size="md"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+          <Button icon={Save} loading={loading} onClick={handleSubmit}>حفظ</Button>
+        </>
+      }
+    >
       <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>المستفيد</label>
-          <select value={form.beneficiaryId} onChange={(e) => updateField('beneficiaryId', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg"
-            style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
-            <option value="">اختر المستفيد</option>
-            {beneficiaries.map((b) => (
-              <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>الأخصائي</label>
-          <select value={form.specialistId} onChange={(e) => updateField('specialistId', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg"
-            style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
-            <option value="">اختر الأخصائي</option>
-            {specialists.map((s: any) => (
-              <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>النوع</label>
-            <select value={form.type} onChange={(e) => updateField('type', e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg"
-              style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
-              {TYPE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-            </select>
+        {error && (
+          <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-status-error-light text-status-error-text">
+            <AlertCircle size={14} className="shrink-0" /> {error}
           </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>الحالة</label>
-            <select value={form.status} onChange={(e) => updateField('status', e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg"
-              style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
-              {STATUS_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-            </select>
-          </div>
+        )}
+
+        <Select
+          label="المستفيد"
+          value={form.beneficiaryId}
+          onChange={(e) => updateField('beneficiaryId', e.target.value)}
+          options={beneficiaries.map((b) => ({ value: b.id, label: `${b.firstName} ${b.lastName}` }))}
+          placeholder="اختر المستفيد"
+        />
+
+        <Select
+          label="الأخصائي"
+          value={form.specialistId}
+          onChange={(e) => updateField('specialistId', e.target.value)}
+          options={specialists.map((s) => ({ value: s.id, label: `${s.firstName} ${s.lastName}` }))}
+          placeholder="اختر الأخصائي"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="النوع"
+            value={form.type}
+            onChange={(e) => updateField('type', e.target.value)}
+            options={TYPE_OPTIONS}
+          />
+          <Select
+            label="الحالة"
+            value={form.status}
+            onChange={(e) => updateField('status', e.target.value)}
+            options={STATUS_OPTIONS}
+          />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>التاريخ والوقت</label>
-          <input type="datetime-local" value={form.scheduledAt} onChange={(e) => updateField('scheduledAt', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg"
-            style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }} />
-        </div>
+        <Input
+          label="التاريخ والوقت"
+          type="datetime-local"
+          value={form.scheduledAt}
+          onChange={(e) => updateField('scheduledAt', e.target.value)}
+        />
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>المدة (دقائق)</label>
-            <input type="number" value={form.durationMinutes} onChange={(e) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="المدة (دقائق)"
+            type="number"
+            value={form.durationMinutes}
+            onChange={(e) => {
               const raw = parseInt(e.target.value, 10);
               updateField('durationMinutes', Number.isNaN(raw) ? 60 : raw);
             }}
-              className="w-full px-3 py-2 text-sm rounded-lg"
-              style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>الموقع</label>
-            <input value={form.location} onChange={(e) => updateField('location', e.target.value)}
-              placeholder="الموقع"
-              className="w-full px-3 py-2 text-sm rounded-lg"
-              style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }} />
-          </div>
+          />
+          <Input
+            label="الموقع"
+            value={form.location}
+            placeholder="الموقع"
+            onChange={(e) => updateField('location', e.target.value)}
+          />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>ملاحظات</label>
-          <textarea value={form.notes} onChange={(e) => updateField('notes', e.target.value)} rows={3}
-            className="w-full px-3 py-2 text-sm rounded-lg"
-            style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }} />
-        </div>
+        <Textarea
+          label="ملاحظات"
+          rows={3}
+          value={form.notes}
+          placeholder="ملاحظات إضافية..."
+          onChange={(e) => updateField('notes', e.target.value)}
+        />
       </div>
+    </Dialog>
+  );
+}
 
-      <div className="flex items-center gap-2 mt-6 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-        <button onClick={handleSubmit} disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg text-white font-medium"
-          style={{ backgroundColor: 'var(--primary)' }}>
-          {loading ? 'جاري الحفظ...' : <><Save size={14} /> حفظ</>}
-        </button>
-        <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg" style={{ color: 'var(--text-muted)' }}>
-          إلغاء
-        </button>
+function ViewContent({ appointment }: { appointment: Appointment }) {
+  const sColors = CALENDAR_DEFAULT_COLORS.status[appointment.status];
+  const time = new Date(appointment.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+  const date = new Date(appointment.scheduledAt).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  return (
+    <div className="space-y-4">
+      {(appointment.beneficiary) && (
+        <div className="flex items-center gap-2">
+          <User size={16} className="text-text-muted shrink-0" />
+          <span className="text-sm text-text-primary">
+            {appointment.beneficiary.firstName} {appointment.beneficiary.lastName}
+          </span>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <Clock size={16} className="text-text-muted shrink-0" />
+        <span className="text-sm text-text-primary">{date} · {time}</span>
       </div>
-    </>
+      {appointment.durationMinutes > 0 && (
+        <div className="text-sm text-text-muted">المدة: {appointment.durationMinutes} دقيقة</div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge label={APPOINTMENT_STATUS_LABELS[appointment.status]}
+          style={{ backgroundColor: sColors.bg, color: sColors.text }} />
+        {appointment.type && (
+          <Badge label={APPOINTMENT_TYPE_LABELS[appointment.type]}
+            style={{
+              backgroundColor: CALENDAR_DEFAULT_COLORS.type[appointment.type].bg,
+              color: CALENDAR_DEFAULT_COLORS.type[appointment.type].text,
+            }} />
+        )}
+      </div>
+      {appointment.location && (
+        <div className="flex items-center gap-2">
+          <MapPin size={16} className="text-text-muted shrink-0" />
+          <span className="text-sm text-text-primary">{appointment.location}</span>
+        </div>
+      )}
+      {appointment.notes && (
+        <div className="flex items-start gap-2">
+          <FileText size={16} className="text-text-muted mt-0.5 shrink-0" />
+          <p className="text-sm text-text-primary">{appointment.notes}</p>
+        </div>
+      )}
+    </div>
   );
 }

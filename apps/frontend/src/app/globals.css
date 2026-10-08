@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   هيكل الـskeleton يعتمد على animate-pulse. لمن اختار تقليل الحركة يبقى
+   الرمادي ثابتًا: الشكل والأبعاد محفوظان، والحركة وحدها تتوقف — فيبقى معنى
+   "قيد التحميل" دون حركة مستمرة قد تسبب إزعاجًا.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+}
+
 @layer base {
   /* ═══════════════════════════════════════════════════════════════════════════
      DESIGN TOKENS — LIGHT THEME

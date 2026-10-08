@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, Clock, FileText, UserCheck, UserX, Lock,
 } from 'lucide-react';
 import { adminService } from '@/services/admin.service';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
 
 export default function SecurityCenterPage() {
@@ -50,7 +50,7 @@ export default function SecurityCenterPage() {
     },
   ];
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageSkeleton variant="form" />;
 
   return (
     <div className="space-y-6">

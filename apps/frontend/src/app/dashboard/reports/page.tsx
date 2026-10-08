@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouter }          from 'next/navigation';
 import { Plus, FileText, CheckCircle, Clock, Archive, AlertCircle } from 'lucide-react';
 import toast                  from 'react-hot-toast';
 import { reportsService }     from '@/services/reports.service';
 import { ReportCard }         from '@/components/reports/report-card';
-import { PageLoader }         from '@/components/ui/spinner';
 import { EmptyState }         from '@/components/ui/empty-state';
 import { PermissionGate }     from '@/components/auth/permission-gate';
 import {
@@ -171,7 +171,7 @@ export default function ReportsPage() {
 
       {/* List */}
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : reports.length === 0 ? (
         <EmptyState
           icon={FileText}

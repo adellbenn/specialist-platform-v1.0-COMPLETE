@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Shield, Users, Key, FolderOpen, Activity, AlertTriangle } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAuthStore } from '@/store/auth.store';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -37,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.replace('/dashboard');
   }, [user, isAuthenticated, _hydrated, router]);
 
-  if (!_hydrated || !user || !isAuthenticated) return <PageLoader />;
+  if (!_hydrated || !user || !isAuthenticated) return <TableSkeleton />;
   if (!ADMIN_ROLES.includes(user.role)) return null;
 
   return (

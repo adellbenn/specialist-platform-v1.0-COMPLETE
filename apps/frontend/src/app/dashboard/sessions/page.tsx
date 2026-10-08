@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Clock, User, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { PageLoader } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +83,7 @@ export default function SessionsPage() {
       </div>
 
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : sessions.length === 0 ? (
         <EmptyState icon={FileText} title="لا توجد جلسات" description="لم يتم تسجيل أي جلسات بعد"
           action={

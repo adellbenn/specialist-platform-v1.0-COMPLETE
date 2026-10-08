@@ -21,6 +21,25 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+/* ─── إبطال السلطة عند فشل المصادقة ───
+   لا يستورد هذا الملف المتجر (تفادي دورة استيراد)، بل يستقبل مُسجِّلًا
+   يسجّله `permissions.store` عند التحميل. أي فشل في تجديد التوكن يُبطل
+   صلاحية الوصول قبل إعادة التوجيه، فلا تبقى صلاحية صالحة بعد logout. */
+type AuthFailureHandler = () => void;
+let authFailureHandler: AuthFailureHandler | null = null;
+
+export function registerAuthFailureHandler(handler: AuthFailureHandler): void {
+  authFailureHandler = handler;
+}
+
+function revokePermissionAuthority(): void {
+  try {
+    authFailureHandler?.();
+  } catch {
+    /* لا نُفشل مسار إعادة التوجيه بسبب الإبطال */
+  }
+}
+
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: Function; reject: Function }> = [];
 
@@ -54,6 +73,7 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         processQueue(new Error('No refresh token'), null);
+        revokePermissionAuthority();
         Cookies.remove('accessToken', { path: '/' });
         Cookies.remove('refreshToken', { path: '/' });
         window.location.href = '/auth/login';
@@ -76,6 +96,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as Error, null);
+        revokePermissionAuthority();
         Cookies.remove('accessToken', { path: '/' });
         Cookies.remove('refreshToken', { path: '/' });
         window.location.href = '/auth/login';
