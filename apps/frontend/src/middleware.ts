@@ -29,8 +29,8 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get(AUTH_COOKIE)?.value;
 
-  if (isPublicRoute(pathname) || pathname === '/') {
-    if (accessToken && pathname === '/') {
+  if (isAuthRoute(pathname)) {
+    if (accessToken) {
       const dashboardUrl = request.nextUrl.clone();
       dashboardUrl.pathname = '/dashboard';
       return NextResponse.redirect(dashboardUrl);
@@ -38,8 +38,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isAuthRoute(pathname)) {
-    if (accessToken) {
+  if (isPublicRoute(pathname) || pathname === '/') {
+    if (accessToken && pathname === '/') {
       const dashboardUrl = request.nextUrl.clone();
       dashboardUrl.pathname = '/dashboard';
       return NextResponse.redirect(dashboardUrl);
