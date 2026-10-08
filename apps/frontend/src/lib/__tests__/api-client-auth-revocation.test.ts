@@ -111,6 +111,37 @@ describe('api-client: إبطال السلطة عند فشل المصادقة', (
     expect(href).toBe('/dashboard');
   });
 
+  it('تجديد ناجح يحفظ accessToken و refreshToken الجديدين بنفس خيارات الكوكيز', async () => {
+    const { interceptor } = await loadWithHandler();
+    getCookie('refresh-token');
+    mockedCookies.set.mockClear();
+    mockedAxiosPost.mockResolvedValue({
+      data: { data: { accessToken: 'new-access', refreshToken: 'rotated-refresh' } },
+    } as never);
+
+    await interceptor(rejectWith(401));
+
+    const secure = process.env.NODE_ENV === 'production';
+    expect(mockedCookies.set).toHaveBeenCalledWith('accessToken', 'new-access', {
+      expires: 1, sameSite: 'lax', secure, path: '/',
+    });
+    expect(mockedCookies.set).toHaveBeenCalledWith('refreshToken', 'rotated-refresh', {
+      expires: 7, sameSite: 'lax', secure, path: '/',
+    });
+  });
+
+  it('طلبان متوازيان 401 يُشغّلان تجديدًا واحدًا فقط', async () => {
+    const { interceptor } = await loadWithHandler();
+    getCookie('refresh-token');
+    mockedAxiosPost.mockResolvedValue({
+      data: { data: { accessToken: 'new-access', refreshToken: 'rotated-refresh' } },
+    } as never);
+
+    await Promise.all([interceptor(rejectWith(401)), interceptor(rejectWith(401))]);
+
+    expect(mockedAxiosPost).toHaveBeenCalledTimes(1);
+  });
+
   it('401 أثناء الطلب المُعاد لا يعيد محاولة التجديد', async () => {
     const { onAuthFailure, interceptor } = await loadWithHandler();
     getCookie('refresh-token');

@@ -83,13 +83,18 @@ apiClient.interceptors.response.use(
       try {
         const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
         const newAccessToken = data.data.accessToken;
+        const rotatedRefreshToken = data.data.refreshToken;
 
-        Cookies.set('accessToken', newAccessToken, {
-          expires: 1,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-        });
+        const secure = process.env.NODE_ENV === 'production';
+        Cookies.set('accessToken', newAccessToken, { expires: 1, sameSite: 'lax', secure, path: '/' });
+        if (rotatedRefreshToken) {
+          Cookies.set('refreshToken', rotatedRefreshToken, {
+            expires: 7,
+            sameSite: 'lax',
+            secure,
+            path: '/',
+          });
+        }
         apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
 
         processQueue(null, newAccessToken);
