@@ -5,6 +5,9 @@ import {
   WRITER_CLASS_ROLES,
   WRITE_BYPASS_ROLES,
   BENEFICIARY_ROLES,
+  STAFF_AND_ACCOUNTANT_ROLES,
+  WRITER_AND_ACCOUNTANT_ROLES,
+  ALL_ROLES_AND_ACCOUNTANT,
   RbacClass,
   getRbacClass,
 } from '../user.entity';
@@ -95,6 +98,31 @@ describe('User Entity — Extended Tests', () => {
   describe('BENEFICIARY_ROLES', () => {
     it('should contain only beneficiary', () => {
       expect(BENEFICIARY_ROLES).toEqual([UserRole.BENEFICIARY]);
+    });
+  });
+
+  describe('accountant least-privilege role lists', () => {
+    it('keeps accountant OUT of ADMIN_CLASS_ROLES', () => {
+      expect(ADMIN_CLASS_ROLES).not.toContain(UserRole.ACCOUNTANT);
+    });
+
+    it('STAFF_AND_ACCOUNTANT_ROLES includes staff + accountant, not beneficiary', () => {
+      expect(STAFF_AND_ACCOUNTANT_ROLES).toContain(UserRole.ACCOUNTANT);
+      expect(STAFF_AND_ACCOUNTANT_ROLES).toContain(UserRole.SPECIALIST);
+      expect(STAFF_AND_ACCOUNTANT_ROLES).toContain(UserRole.SUPERVISOR);
+      expect(STAFF_AND_ACCOUNTANT_ROLES).not.toContain(UserRole.BENEFICIARY);
+    });
+
+    it('WRITER_AND_ACCOUNTANT_ROLES includes accountant and writers only', () => {
+      expect(WRITER_AND_ACCOUNTANT_ROLES).toContain(UserRole.ACCOUNTANT);
+      expect(WRITER_AND_ACCOUNTANT_ROLES).toContain(UserRole.SPECIALIST);
+      expect(WRITER_AND_ACCOUNTANT_ROLES).not.toContain(UserRole.BENEFICIARY);
+      expect(WRITER_AND_ACCOUNTANT_ROLES).not.toContain(UserRole.SUPERVISOR);
+    });
+
+    it('ALL_ROLES_AND_ACCOUNTANT includes accountant and beneficiary', () => {
+      expect(ALL_ROLES_AND_ACCOUNTANT).toContain(UserRole.ACCOUNTANT);
+      expect(ALL_ROLES_AND_ACCOUNTANT).toContain(UserRole.BENEFICIARY);
     });
   });
 

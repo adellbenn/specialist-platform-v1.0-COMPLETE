@@ -12,7 +12,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { TenantGuard } from '@common/guards/tenant.guard';
-import { AllRoles, CurrentUser } from '@common/decorators';
+import { AllRolesAndAccountant, CurrentUser } from '@common/decorators';
 import { User } from '@modules/users/user.entity';
 
 @ApiTags('الإشعارات')
@@ -24,7 +24,7 @@ export class NotificationsController {
 
   /** قائمة إشعارات المستخدم الحالي */
   @Get()
-  @AllRoles()
+  @AllRolesAndAccountant()
   @ApiOperation({ summary: 'قائمة الإشعارات' })
   async findAll(
     @CurrentUser() user: User,
@@ -36,7 +36,7 @@ export class NotificationsController {
 
   /** عدد الإشعارات غير المقروءة */
   @Get('unread-count')
-  @AllRoles()
+  @AllRolesAndAccountant()
   @ApiOperation({ summary: 'عدد الإشعارات غير المقروءة' })
   async getUnreadCount(@CurrentUser() user: User) {
     const count = await this.service.getUnreadCount(user.id);
@@ -45,7 +45,7 @@ export class NotificationsController {
 
   /** تعليم إشعار كمقروء */
   @Patch(':id/read')
-  @AllRoles()
+  @AllRolesAndAccountant()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'تعليم إشعار كمقروء' })
   async markRead(@Param('id') id: string, @CurrentUser() user: User) {
@@ -55,7 +55,7 @@ export class NotificationsController {
 
   /** تعليم جميع الإشعارات كمقروءة */
   @Patch('read-all')
-  @AllRoles()
+  @AllRolesAndAccountant()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'تعليم جميع الإشعارات كمقروءة' })
   async markAllRead(@CurrentUser() user: User) {

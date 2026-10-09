@@ -26,9 +26,11 @@ import { RbacGuard } from '@common/guards/rbac.guard';
 import {
   AllStaff,
   WriterOnly,
-  StaffOrBeneficiary,
+  StaffAndAccountant,
+  AllRolesAndAccountant,
   AdminOnly,
   RequirePermissions,
+  RequireAnyPermission,
   CurrentUser,
   TenantId,
 } from '@common/decorators';
@@ -60,8 +62,8 @@ export class ReportsController {
   // ─── قائمة التقارير ───────────────────────────────────────
 
   @Get()
-  @StaffOrBeneficiary()
-  @RequirePermissions(Permission.REPORT_VIEW_OWN)
+  @AllRolesAndAccountant()
+  @RequireAnyPermission(Permission.REPORT_VIEW_ALL, Permission.REPORT_VIEW_OWN)
   @ApiOperation({ summary: 'قائمة التقارير' })
   async findAll(
     @Query() query: ReportQueryDto,
@@ -74,7 +76,7 @@ export class ReportsController {
   // ─── إحصائيات ─────────────────────────────────────────────
 
   @Get('stats')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.DASHBOARD_STATS)
   @ApiOperation({ summary: 'إحصائيات التقارير' })
   async getStats(@TenantId() tenantId: string) {
@@ -84,8 +86,8 @@ export class ReportsController {
   // ─── تفاصيل تقرير ─────────────────────────────────────────
 
   @Get(':id')
-  @StaffOrBeneficiary()
-  @RequirePermissions(Permission.REPORT_VIEW_OWN)
+  @AllRolesAndAccountant()
+  @RequireAnyPermission(Permission.REPORT_VIEW_ALL, Permission.REPORT_VIEW_OWN)
   @ApiOperation({ summary: 'تفاصيل تقرير' })
   async findOne(@Param('id') id: string, @TenantId() tenantId: string, @CurrentUser() user: User) {
     return { data: await this.service.findOne(id, tenantId, user) };

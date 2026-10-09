@@ -5,7 +5,13 @@ import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { TenantGuard } from '@common/guards/tenant.guard';
 import { RbacGuard } from '@common/guards/rbac.guard';
-import { AllStaff, RequirePermissions, CurrentUser, TenantId } from '@common/decorators';
+import {
+  AllStaff,
+  StaffAndAccountant,
+  RequirePermissions,
+  CurrentUser,
+  TenantId,
+} from '@common/decorators';
 import { Permission } from '@common/permissions/permissions.enum';
 import { User, UserRole } from '@modules/users/user.entity';
 
@@ -19,7 +25,7 @@ export class AnalyticsController {
 
   /** إحصائيات لوحة التحكم الرئيسية */
   @Get('dashboard')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.DASHBOARD_STATS)
   @ApiOperation({ summary: 'إحصائيات لوحة التحكم' })
   async getDashboard(@TenantId() tenantId: string, @CurrentUser() user: User) {

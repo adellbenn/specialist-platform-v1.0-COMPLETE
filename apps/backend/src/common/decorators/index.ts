@@ -5,7 +5,14 @@ import {
   applyDecorators,
   UseGuards,
 } from '@nestjs/common';
-import { UserRole, ADMIN_CLASS_ROLES, WRITER_CLASS_ROLES } from '@modules/users/user.entity';
+import {
+  UserRole,
+  ADMIN_CLASS_ROLES,
+  WRITER_CLASS_ROLES,
+  STAFF_AND_ACCOUNTANT_ROLES,
+  WRITER_AND_ACCOUNTANT_ROLES,
+  ALL_ROLES_AND_ACCOUNTANT,
+} from '@modules/users/user.entity';
 import { Permission } from '@common/permissions/permissions.enum';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { PermissionGuard } from '@common/guards/permission.guard';
@@ -83,6 +90,24 @@ export const AllRoles = () =>
  * الموظفون + المستفيد لمساراتهم المشتركة
  */
 export const StaffOrBeneficiary = AllRoles;
+
+/**
+ * @StaffAndAccountant — الموظفون + المحاسب (بدون المستفيد)
+ */
+export const StaffAndAccountant = () =>
+  applyDecorators(UseGuards(RolesGuard), Roles(...STAFF_AND_ACCOUNTANT_ROLES));
+
+/**
+ * @WriterAndAccountant — الكتاب + المحاسب
+ */
+export const WriterAndAccountant = () =>
+  applyDecorators(UseGuards(RolesGuard), Roles(...WRITER_AND_ACCOUNTANT_ROLES));
+
+/**
+ * @AllRolesAndAccountant — جميع الأدوار + المحاسب
+ */
+export const AllRolesAndAccountant = () =>
+  applyDecorators(UseGuards(RolesGuard), Roles(...ALL_ROLES_AND_ACCOUNTANT));
 
 // ═══════════════════════════════════════════════════════════════
 // PARAM DECORATORS

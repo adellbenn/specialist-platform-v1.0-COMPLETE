@@ -27,8 +27,8 @@ import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { TenantGuard } from '@common/guards/tenant.guard';
 import { RbacGuard } from '@common/guards/rbac.guard';
 import {
-  AllStaff,
-  WriterOnly,
+  StaffAndAccountant,
+  WriterAndAccountant,
   RequirePermissions,
   CurrentUser,
   TenantId,
@@ -48,7 +48,7 @@ export class PaymentsController {
   // ═══════════════════════════════════════════
 
   @Get('stats')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'إحصائيات المدفوعات' })
   async getStats(@TenantId() tenantId: string) {
@@ -60,7 +60,7 @@ export class PaymentsController {
   // ═══════════════════════════════════════════
 
   @Post('packages')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_CREATE)
   @ApiOperation({ summary: 'إنشاء باقة خدمة' })
   async createPackage(@Body() dto: CreatePackageDto, @TenantId() tenantId: string) {
@@ -69,7 +69,7 @@ export class PaymentsController {
   }
 
   @Get('packages')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'قائمة الباقات النشطة' })
   async getPackages(@TenantId() tenantId: string) {
@@ -84,7 +84,7 @@ export class PaymentsController {
   }
 
   @Put('packages/:id')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_UPDATE)
   @ApiOperation({ summary: 'تعديل باقة' })
   async updatePackage(
@@ -101,7 +101,7 @@ export class PaymentsController {
   // ═══════════════════════════════════════════
 
   @Post('subscriptions')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_CREATE)
   @ApiOperation({ summary: 'إنشاء اشتراك جديد' })
   async createSubscription(
@@ -114,7 +114,7 @@ export class PaymentsController {
   }
 
   @Get('subscriptions')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'قائمة الاشتراكات' })
   async getSubscriptions(@Query() query: SubscriptionQueryDto, @TenantId() tenantId: string) {
@@ -122,7 +122,7 @@ export class PaymentsController {
   }
 
   @Get('subscriptions/:id')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'تفاصيل اشتراك' })
   async getSubscription(@Param('id') id: string, @TenantId() tenantId: string) {
@@ -130,7 +130,7 @@ export class PaymentsController {
   }
 
   @Get('subscriptions/beneficiary/:beneficiaryId/active')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'الاشتراك النشط للمستفيد' })
   async getActiveSubscription(
@@ -142,7 +142,7 @@ export class PaymentsController {
   }
 
   @Patch('subscriptions/:id/cancel')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_UPDATE)
   @ApiOperation({ summary: 'إلغاء اشتراك' })
   async cancelSubscription(@Param('id') id: string, @TenantId() tenantId: string) {
@@ -155,7 +155,7 @@ export class PaymentsController {
   // ═══════════════════════════════════════════
 
   @Post('invoices')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_CREATE)
   @ApiOperation({ summary: 'إصدار فاتورة' })
   async createInvoice(
@@ -168,7 +168,7 @@ export class PaymentsController {
   }
 
   @Get('invoices')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'قائمة الفواتير' })
   async getInvoices(@Query() query: InvoiceQueryDto, @TenantId() tenantId: string) {
@@ -176,7 +176,7 @@ export class PaymentsController {
   }
 
   @Get('invoices/:id')
-  @AllStaff()
+  @StaffAndAccountant()
   @RequirePermissions(Permission.PAYMENT_VIEW)
   @ApiOperation({ summary: 'تفاصيل فاتورة' })
   async getInvoice(@Param('id') id: string, @TenantId() tenantId: string) {
@@ -184,7 +184,7 @@ export class PaymentsController {
   }
 
   @Patch('invoices/:id/pay')
-  @WriterOnly()
+  @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_UPDATE)
   @ApiOperation({ summary: 'تسجيل الدفع' })
   async markPaid(@Param('id') id: string, @Body() dto: MarkPaidDto, @TenantId() tenantId: string) {

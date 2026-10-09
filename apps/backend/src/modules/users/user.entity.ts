@@ -46,6 +46,30 @@ export const WRITE_BYPASS_ROLES: UserRole[] = [
 /** دور المستفيد — مستقل تماماً */
 export const BENEFICIARY_ROLES: UserRole[] = [UserRole.BENEFICIARY];
 
+/**
+ * أدوار الموظفين + المحاسب — وصول المحاسب لوحداته (المدفوعات، التقارير، لوحة التحكم)
+ * قائمة مخصّصة لتجنّب منح المحاسب كامل صلاحيات ADMIN_CLASS_ROLES
+ */
+export const STAFF_AND_ACCOUNTANT_ROLES: UserRole[] = [
+  ...ADMIN_CLASS_ROLES,
+  ...WRITER_CLASS_ROLES,
+  UserRole.ACCOUNTANT,
+];
+
+/** الكتاب + المحاسب — عمليات الكتابة في الوحدات المالية */
+export const WRITER_AND_ACCOUNTANT_ROLES: UserRole[] = [
+  ...WRITER_CLASS_ROLES,
+  UserRole.ACCOUNTANT,
+];
+
+/** جميع الأدوار + المحاسب — الإشعارات والتقارير المشتركة */
+export const ALL_ROLES_AND_ACCOUNTANT: UserRole[] = [
+  ...ADMIN_CLASS_ROLES,
+  ...WRITER_CLASS_ROLES,
+  UserRole.BENEFICIARY,
+  UserRole.ACCOUNTANT,
+];
+
 export enum RbacClass {
   ADMIN = 'admin',
   WRITER = 'writer',

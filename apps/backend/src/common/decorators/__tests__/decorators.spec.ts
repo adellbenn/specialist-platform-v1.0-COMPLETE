@@ -6,6 +6,9 @@ import {
   RequirePermissions,
   RequireAnyPermission,
   AdminOnly,
+  StaffAndAccountant,
+  WriterAndAccountant,
+  AllRolesAndAccountant,
   CurrentUser,
   TenantId,
   IS_PUBLIC_KEY,
@@ -94,6 +97,37 @@ describe('Decorators', () => {
       (metadata as UserRole[]).forEach((r) => {
         expect(['super_admin', 'center_manager', 'supervisor', 'accountant']).toContain(r);
       });
+    });
+  });
+
+  describe('accountant role decorators', () => {
+    it('@StaffAndAccountant includes accountant, excludes beneficiary', () => {
+      class TestController {
+        @StaffAndAccountant() method() {}
+      }
+      const roles = Reflect.getMetadata(ROLES_KEY, TestController.prototype.method) as UserRole[];
+      expect(roles).toContain(UserRole.ACCOUNTANT);
+      expect(roles).toContain(UserRole.SPECIALIST);
+      expect(roles).not.toContain(UserRole.BENEFICIARY);
+    });
+
+    it('@WriterAndAccountant includes accountant and writers only', () => {
+      class TestController {
+        @WriterAndAccountant() method() {}
+      }
+      const roles = Reflect.getMetadata(ROLES_KEY, TestController.prototype.method) as UserRole[];
+      expect(roles).toContain(UserRole.ACCOUNTANT);
+      expect(roles).not.toContain(UserRole.SUPERVISOR);
+      expect(roles).not.toContain(UserRole.BENEFICIARY);
+    });
+
+    it('@AllRolesAndAccountant includes accountant and beneficiary', () => {
+      class TestController {
+        @AllRolesAndAccountant() method() {}
+      }
+      const roles = Reflect.getMetadata(ROLES_KEY, TestController.prototype.method) as UserRole[];
+      expect(roles).toContain(UserRole.ACCOUNTANT);
+      expect(roles).toContain(UserRole.BENEFICIARY);
     });
   });
 
