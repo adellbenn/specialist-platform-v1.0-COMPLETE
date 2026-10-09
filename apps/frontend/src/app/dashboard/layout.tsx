@@ -254,7 +254,7 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, logout, refreshUser, _hydrated } = useAuthStore();
+  const { user, isAuthenticated, logout, refreshUser, _hydrated, mustChangePassword } = useAuthStore();
   const { isAdmin, isSuperAdmin, canWrite, can, canAny, hasRole, hasAnyRole, hasAuthority } = usePermissions();
   const { fetchPermissions, clearPermissions } = usePermissionsStore();
   const permissionStatus = usePermissionsStore((s) => s.status);
@@ -288,7 +288,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
      `user` محفوظًا بينما `isAuthenticated` صار false. الاعتماد على
      `hasAuthority` وحده كان يركّب children في تلك النافذة. */
   const routeBlocked =
-    !isAuthenticated || !hasAuthority || allowedPath !== pathname;
+    !isAuthenticated || !hasAuthority || allowedPath !== pathname || mustChangePassword;
 
   const userId   = user?.id ?? null;
   const userRole = user?.role ?? null;
@@ -309,6 +309,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     refreshUser();
     fetchPermissions({ id: userId, role: userRole ?? '' });
   }, [_hydrated, isAuthenticated, userId, userRole, clearPermissions, refreshUser, fetchPermissions, router]);
+
+  /* مستخدم مُلزَم بتغيير كلمة المرور لا يُسمح له بالبقاء داخل اللوحة. */
+  useEffect(() => {
+    if (_hydrated && isAuthenticated && mustChangePassword) {
+      router.replace('/auth/change-password');
+    }
+  }, [_hydrated, isAuthenticated, mustChangePassword, router]);
 
   /* فشل الجلب = لا سلطة. لا محاولة تلقائية: أي إعادة محاولة مؤجَّلة تُنتج
      حالة مخفية يصعب إثبات حدودها، والفشل العابر لا يستحق طرد المستخدم من

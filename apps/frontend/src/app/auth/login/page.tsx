@@ -28,9 +28,9 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login(data.email, data.password);
+      const mustChangePassword = await login(data.email, data.password);
       toast.success('مرحباً بك!');
-      router.push('/dashboard');
+      router.push(mustChangePassword ? '/auth/change-password' : '/dashboard');
     } catch (error: any) {
       const message = error?.response?.data?.message || 'فشل تسجيل الدخول';
       toast.error(message);

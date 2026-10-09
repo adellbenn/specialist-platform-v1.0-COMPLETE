@@ -16,7 +16,7 @@ import { usePermissionsStore } from '@/store/permissions.store';
    نفس الانسداد يحدث إذا تعذّر الوصول إلى localStorage (قيمة `storage` غير معرّفة).
    المُطبَّع هنا: قراءة ترميزية تُلقى القيمة التالفة وتُمحى، وأي فشل يُرجِع null
    فتكمل إعادة التحميل إلى الحالة الابتدائية — ومنها التحويل إلى تسجيل الدخول. */
-type PersistedAuth = { user: User | null; isAuthenticated: boolean };
+type PersistedAuth = { user: User | null; isAuthenticated: boolean; mustChangePassword: boolean };
 
 const authPersistStorage: PersistStorage<PersistedAuth> = {
   getItem: (name) => {
@@ -45,12 +45,16 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /* يُعاد بناءها من `user.mustChangePassword` عند الدخول ومن GET /auth/me
+     عند إعادة التحميل، وتُخزَّن محليًا لكي لا يمر المستخدم باللوحة لحظة. */
+  mustChangePassword: boolean;
   _hydrated: boolean;
 
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   setUser: (user: User) => void;
+  clearMustChangePassword: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -59,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      mustChangePassword: false,
       _hydrated: false,
 
       login: async (email: string, password: string) => {
@@ -79,7 +84,9 @@ export const useAuthStore = create<AuthState>()(
           Cookies.set('accessToken', accessToken, { expires: 1, sameSite: 'lax', secure, path: '/' });
           Cookies.set('refreshToken', refreshToken, { expires: 7, sameSite: 'lax', secure, path: '/' });
 
-          set({ user, isAuthenticated: true });
+          const mustChangePassword = user.mustChangePassword === true;
+          set({ user, isAuthenticated: true, mustChangePassword });
+          return mustChangePassword;
         } finally {
           set({ isLoading: false });
         }
@@ -92,24 +99,39 @@ export const useAuthStore = create<AuthState>()(
         usePermissionsStore.getState().clearPermissions();
         Cookies.remove('accessToken', { path: '/' });
         Cookies.remove('refreshToken', { path: '/' });
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, mustChangePassword: false });
         apiClient.post('/auth/logout').catch(() => {});
       },
 
       refreshUser: async () => {
         try {
           const { data } = await apiClient.get<{ data: User }>('/auth/me');
-          set({ user: data.data, isAuthenticated: true });
+          set({
+            user: data.data,
+            isAuthenticated: true,
+            mustChangePassword: data.data.mustChangePassword === true,
+          });
         } catch {
           get().logout();
         }
       },
 
-      setUser: (user: User) => set({ user }),
+      setUser: (user: User) =>
+        set({ user, mustChangePassword: user.mustChangePassword === true }),
+
+      clearMustChangePassword: () =>
+        set((state) => ({
+          mustChangePassword: false,
+          user: state.user ? { ...state.user, mustChangePassword: false } : state.user,
+        })),
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        mustChangePassword: state.mustChangePassword,
+      }),
       storage: authPersistStorage,
     },
   ),

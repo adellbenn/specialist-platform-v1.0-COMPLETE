@@ -497,6 +497,7 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       themePreference: user.themePreference || 'system',
       preferences: user.preferences || {},
+      mustChangePassword: user.mustChangePassword || false,
       tenant: user.tenant ? { id: user.tenant.id, name: user.tenant.name } : null,
     };
   }

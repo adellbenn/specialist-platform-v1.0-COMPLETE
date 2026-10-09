@@ -643,6 +643,26 @@ describe('AuthService', () => {
       expect(result.firstName).toBe('Test');
       expect(result.tenant).toEqual({ id: 'tenant-1', name: 'Test Tenant' });
     });
+
+    it('should expose mustChangePassword flag in GET /auth/me payload', async () => {
+      const user = mockUser();
+      user.mustChangePassword = true;
+      userRepo.findOne.mockResolvedValue(user);
+
+      const result = await service.getProfile('user-1');
+
+      expect(result.mustChangePassword).toBe(true);
+    });
+
+    it('should default mustChangePassword to false when unset', async () => {
+      const user = mockUser();
+      user.mustChangePassword = undefined as any;
+      userRepo.findOne.mockResolvedValue(user);
+
+      const result = await service.getProfile('user-1');
+
+      expect(result.mustChangePassword).toBe(false);
+    });
   });
 
   describe('forgotPassword', () => {

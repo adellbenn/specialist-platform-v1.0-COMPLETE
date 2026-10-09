@@ -95,3 +95,20 @@ describe('middleware: redirect authenticated users away from /auth/*', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 });
+
+describe('middleware: مسار تغيير كلمة المرور الإلزامي', () => {
+  it('with token, /auth/change-password is served (لا يُحوَّل إلى /dashboard)', () => {
+    middleware(makeRequest('/auth/change-password', 'token'));
+
+    expect(nextMock).toHaveBeenCalledTimes(1);
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('without token, /auth/change-password redirects to /auth/login', () => {
+    middleware(makeRequest('/auth/change-password'));
+
+    expect(redirectMock).toHaveBeenCalledTimes(1);
+    expect(redirectedTo()).toBe('/auth/login');
+    expect(nextMock).not.toHaveBeenCalled();
+  });
+});

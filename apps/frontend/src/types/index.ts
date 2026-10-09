@@ -139,6 +139,7 @@ export interface User {
   tenantId: string | null;
   avatarUrl: string | null;
   themePreference?: string;
+  mustChangePassword?: boolean;
   tenant?: { id: string; name: string } | null;
 }
 

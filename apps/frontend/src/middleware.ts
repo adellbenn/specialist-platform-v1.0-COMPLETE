@@ -3,6 +3,10 @@ import type { NextRequest } from 'next/server';
 
 const AUTH_COOKIE = 'accessToken';
 
+/* صفحة إلزامية تحت /auth لكنها تتطلب جلسة: لا تُعامل كباقي مسارات /auth
+   التي تُحوَّل إلى /dashboard، وإلا دار المستخدم في حلقة تحويل. */
+const FORCE_PASSWORD_ROUTE = '/auth/change-password';
+
 const publicRoutes = [
   '/',
   '/auth/login',
@@ -28,6 +32,15 @@ function isAuthRoute(pathname: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get(AUTH_COOKIE)?.value;
+
+  if (pathname === FORCE_PASSWORD_ROUTE) {
+    if (!accessToken) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/login';
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
 
   if (isAuthRoute(pathname)) {
     if (accessToken) {
