@@ -1,5 +1,6 @@
 import { TenantsController } from '../tenants.controller';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { UserRole } from '@modules/users/user.entity';
 
 describe('TenantsController', () => {
   let controller: TenantsController;
@@ -44,13 +45,32 @@ describe('TenantsController', () => {
   });
 
   describe('findOne', () => {
-    it('should call tenantsService.findOne', async () => {
+    it('should call tenantsService.findOne for own tenant', async () => {
       const result = { id: 't-1', name: 'Amal' };
       tenantsService.findOne.mockResolvedValue(result);
+      const user = { id: 'user-1', role: UserRole.SPECIALIST, tenantId: 't-1' } as any;
 
-      const response = await controller.findOne('t-1');
+      const response = await controller.findOne('t-1', user);
 
       expect(tenantsService.findOne).toHaveBeenCalledWith('t-1');
+      expect(response).toEqual({ data: result });
+    });
+
+    it('should throw ForbiddenException for a foreign tenant (specialist)', async () => {
+      const user = { id: 'user-1', role: UserRole.SPECIALIST, tenantId: 'my-tenant' } as any;
+
+      await expect(controller.findOne('other-tenant', user)).rejects.toThrow(ForbiddenException);
+      expect(tenantsService.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should allow super_admin to read any tenant', async () => {
+      const result = { id: 'other-tenant', name: 'Global' };
+      tenantsService.findOne.mockResolvedValue(result);
+      const user = { id: 'sa-1', role: UserRole.SUPER_ADMIN, tenantId: null } as any;
+
+      const response = await controller.findOne('other-tenant', user);
+
+      expect(tenantsService.findOne).toHaveBeenCalledWith('other-tenant');
       expect(response).toEqual({ data: result });
     });
   });
@@ -116,13 +136,32 @@ describe('TenantsController', () => {
   });
 
   describe('getStats', () => {
-    it('should call tenantsService.getStats', async () => {
+    it('should call tenantsService.getStats for own tenant', async () => {
       const stats = { totalUsers: 10, totalBeneficiaries: 50 };
       tenantsService.getStats.mockResolvedValue(stats);
+      const user = { id: 'user-1', role: UserRole.CENTER_MANAGER, tenantId: 't-1' } as any;
 
-      const response = await controller.getStats('t-1');
+      const response = await controller.getStats('t-1', user);
 
       expect(tenantsService.getStats).toHaveBeenCalledWith('t-1');
+      expect(response).toBe(stats);
+    });
+
+    it('should throw ForbiddenException for a foreign tenant (center_manager)', async () => {
+      const user = { id: 'user-1', role: UserRole.CENTER_MANAGER, tenantId: 'my-tenant' } as any;
+
+      await expect(controller.getStats('other-tenant', user)).rejects.toThrow(ForbiddenException);
+      expect(tenantsService.getStats).not.toHaveBeenCalled();
+    });
+
+    it('should allow super_admin to read stats of any tenant', async () => {
+      const stats = { totalUsers: 99 };
+      tenantsService.getStats.mockResolvedValue(stats);
+      const user = { id: 'sa-1', role: UserRole.SUPER_ADMIN, tenantId: null } as any;
+
+      const response = await controller.getStats('other-tenant', user);
+
+      expect(tenantsService.getStats).toHaveBeenCalledWith('other-tenant');
       expect(response).toBe(stats);
     });
   });

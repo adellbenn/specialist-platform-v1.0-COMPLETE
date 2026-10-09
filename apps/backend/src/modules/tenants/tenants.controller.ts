@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
@@ -34,6 +35,13 @@ import { UserRole } from '@modules/users/user.entity';
 @Controller('tenants')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
+
+  private assertTenantReadAccess(id: string, user: User): void {
+    if (user.role === UserRole.SUPER_ADMIN) return;
+    if (!user.tenantId || user.tenantId !== id) {
+      throw new ForbiddenException('لا يمكنك الاطلاع على بيانات مركز آخر');
+    }
+  }
 
   /**
    * إنشاء مركز — Super Admin فقط (يتجاوز قاعدة RBAC العامة)
@@ -63,7 +71,8 @@ export class TenantsController {
   @Get(':id')
   @AllRoles()
   @ApiOperation({ summary: 'تفاصيل مركز' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    this.assertTenantReadAccess(id, user);
     const tenant = await this.tenantsService.findOne(id);
     return { data: tenant };
   }
@@ -113,7 +122,8 @@ export class TenantsController {
   @Get(':id/stats')
   @RequirePermissions(Permission.TENANT_VIEW)
   @ApiOperation({ summary: 'إحصائيات المركز — إدارة فقط' })
-  async getStats(@Param('id') id: string) {
+  async getStats(@Param('id') id: string, @CurrentUser() user: User) {
+    this.assertTenantReadAccess(id, user);
     return this.tenantsService.getStats(id);
   }
 }
