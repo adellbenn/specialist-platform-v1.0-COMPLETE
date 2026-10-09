@@ -371,7 +371,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     .filter((section) => section.items.length > 0);
 
   const Sidebar = () => (
-    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}>
+    <div className="flex flex-col h-full w-full" style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}>
       <div className="flex items-center gap-3 px-5 h-16 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
           <Building2 size={18} className="text-white" />
