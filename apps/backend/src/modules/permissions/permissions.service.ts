@@ -5,8 +5,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, Not } from 'typeorm';
-import { Permission, getAllModuleActions } from './permission.entity';
+import { EntityManager, In, Repository, Not } from 'typeorm';
+import {
+  Permission,
+  PermissionAction,
+  PermissionModule,
+  getAllModuleActions,
+} from './permission.entity';
 import { Role } from './role.entity';
 import { PermissionGroup } from './permission-group.entity';
 import { UserPermission, OverrideType } from './user-permission.entity';
@@ -21,7 +26,7 @@ import {
 } from './dto/permission.dto';
 import { AuditLogService } from '@modules/audit-log/audit-log.module';
 import { AuditAction } from '@modules/audit-log/audit-log.entity';
-import { RoleKey, ROLE_PERMISSIONS } from '@common/permissions/role-permissions';
+import { RoleKey, getPermissionsForRole } from '@common/permissions/role-permissions';
 import { PermissionEngine } from '@common/permissions/permission-engine.service';
 
 @Injectable()
@@ -53,32 +58,122 @@ export class PermissionsService {
   }
 
   // ─── Seed ─────────────────────────────────────────────────────────
-  async seedPermissions(): Promise<number> {
-    const existing = await this.permRepo.count();
-    if (existing > 0) return existing;
 
-    const all = getAllModuleActions();
-    const entities = all.map(({ module, action, key }) =>
-      this.permRepo.create({
-        module,
-        action,
-        displayName: key,
-        isSystem: true,
-      }),
-    );
-    await this.permRepo.save(entities);
-    return entities.length;
+  /** Legacy plural module names → canonical (enum) module names. */
+  private static readonly LEGACY_MODULE_MAP: Record<string, PermissionModule> = {
+    beneficiaries: PermissionModule.BENEFICIARIES,
+    appointments: PermissionModule.APPOINTMENTS,
+    sessions: PermissionModule.SESSIONS,
+    reports: PermissionModule.REPORTS,
+    payments: PermissionModule.PAYMENTS,
+    files: PermissionModule.FILES,
+    invoices: PermissionModule.INVOICES,
+    medical_records: PermissionModule.MEDICAL_RECORDS,
+    users: PermissionModule.USERS,
+    roles: PermissionModule.ROLES,
+    permissions: PermissionModule.PERMISSIONS,
+    notifications: PermissionModule.NOTIFICATIONS,
+    specialists: PermissionModule.SPECIALISTS,
+  };
+
+  /** Legacy "module:action" keys → canonical action. */
+  private static readonly LEGACY_ACTION_MAP: Record<string, PermissionAction> = {
+    'sessions:confirm': PermissionAction.CONFIRM_ATTEND,
+  };
+
+  private canonicalModule(module: string): PermissionModule {
+    return (PermissionsService.LEGACY_MODULE_MAP[module] ?? module) as PermissionModule;
+  }
+
+  private canonicalAction(module: string, action: string): PermissionAction {
+    return (PermissionsService.LEGACY_ACTION_MAP[`${module}:${action}`] ?? action) as PermissionAction;
+  }
+
+  /**
+   * Re-point every join-table link from a duplicate permission row to the
+   * surviving row so the duplicate can be dropped without breaking access.
+   */
+  private async repointPermissionLinks(
+    manager: EntityManager,
+    fromId: string,
+    toId: string,
+  ): Promise<void> {
+    const links: Array<{ table: string; owner: string }> = [
+      { table: 'role_permissions', owner: 'role_id' },
+      { table: 'group_permissions', owner: 'group_id' },
+      { table: 'user_permissions', owner: 'user_id' },
+    ];
+    for (const { table, owner } of links) {
+      await manager.query(
+        `DELETE FROM ${table} WHERE permission_id = ? AND ${owner} IN (SELECT ${owner} FROM ${table} WHERE permission_id = ?)`,
+        [fromId, toId],
+      );
+      await manager.query(`UPDATE ${table} SET permission_id = ? WHERE permission_id = ?`, [
+        toId,
+        fromId,
+      ]);
+      await manager.query(`DELETE FROM ${table} WHERE permission_id = ?`, [fromId]);
+    }
+  }
+
+  /**
+   * Idempotent seed: normalizes legacy plural rows to canonical enum keys,
+   * merges duplicates (re-pointing role/group/user links first) and inserts
+   * any enum key that is missing. Safe to run repeatedly.
+   */
+  async seedPermissions(): Promise<number> {
+    return this.permRepo.manager.transaction(async (manager) => {
+      const permRepo = manager.getRepository(Permission);
+      const existing = await permRepo.find();
+
+      const byKey = new Map<string, Permission>();
+      for (const p of existing) byKey.set(`${p.module}:${p.action}`, p);
+
+      for (const p of existing) {
+        const module = this.canonicalModule(p.module);
+        const action = this.canonicalAction(p.module, p.action);
+        if (module === p.module && action === p.action) continue;
+
+        const oldKey = `${p.module}:${p.action}`;
+        const newKey = `${module}:${action}`;
+        const target = byKey.get(newKey);
+
+        if (target && target.id !== p.id) {
+          await this.repointPermissionLinks(manager, p.id, target.id);
+          await permRepo.delete({ id: p.id });
+          byKey.delete(oldKey);
+          continue;
+        }
+
+        p.module = module;
+        p.action = action;
+        p.displayName = newKey;
+        await permRepo.save(p);
+        byKey.delete(oldKey);
+        byKey.set(newKey, p);
+      }
+
+      const toInsert: Permission[] = [];
+      for (const { module, action, key } of getAllModuleActions()) {
+        if (byKey.has(key)) continue;
+        const entity = permRepo.create({ module, action, displayName: key, isSystem: true });
+        toInsert.push(entity);
+        byKey.set(key, entity);
+      }
+      if (toInsert.length > 0) await permRepo.save(toInsert);
+
+      return byKey.size;
+    });
   }
 
   // ─── Seed ─────────────────────────────────────────────────────────
 
+  /**
+   * Idempotent role seeding: creates missing system roles and syncs existing
+   * ones to exactly their ROLE_PERMISSIONS entries. Roles and users are never
+   * deleted and users' roleId is left untouched.
+   */
   async seedRolesFromMap(createdById?: string): Promise<Role[]> {
-    const allPermEntities = await this.permRepo.find();
-    const keyToEntity = new Map<string, Permission>();
-    for (const p of allPermEntities) {
-      keyToEntity.set(`${p.module}:${p.action}`, p);
-    }
-
     const roleKeys: RoleKey[] = [
       'super_admin',
       'center_manager',
@@ -89,29 +184,46 @@ export class PermissionsService {
       'beneficiary',
     ];
 
-    const created: Role[] = [];
-    for (const key of roleKeys) {
-      const existing = await this.roleRepo.findOne({ where: { name: key } });
-      if (existing) {
-        created.push(existing);
-        continue;
+    const saved = await this.roleRepo.manager.transaction(async (manager) => {
+      const roleRepo = manager.getRepository(Role);
+      const permRepo = manager.getRepository(Permission);
+
+      const keyToEntity = new Map<string, Permission>();
+      for (const p of await permRepo.find()) {
+        keyToEntity.set(`${p.module}:${p.action}`, p);
       }
 
-      const enumPerms = ROLE_PERMISSIONS[key] || [];
-      const permissions = enumPerms
-        .map((p) => keyToEntity.get(p.toString()))
-        .filter(Boolean) as Permission[];
+      const result: Role[] = [];
+      for (const key of roleKeys) {
+        const desired = (getPermissionsForRole(key) || [])
+          .map((p) => keyToEntity.get(p.toString()))
+          .filter(Boolean) as Permission[];
 
-      const role = this.roleRepo.create({
-        name: key,
-        isSystem: true,
-        isActive: true,
-        createdById,
-        permissions,
-      });
-      created.push(await this.roleRepo.save(role));
+        const existing = await roleRepo.findOne({
+          where: { name: key },
+          relations: ['permissions'],
+        });
+        if (existing) {
+          existing.permissions = desired;
+          result.push(await roleRepo.save(existing));
+        } else {
+          const role = roleRepo.create({
+            name: key,
+            isSystem: true,
+            isActive: true,
+            createdById,
+            permissions: desired,
+          });
+          result.push(await roleRepo.save(role));
+        }
+      }
+      return result;
+    });
+
+    for (const role of saved) {
+      await this.invalidateRoleUsersCache(role.id);
     }
-    return created;
+    return saved;
   }
 
   // ─── Permissions ──────────────────────────────────────────────────

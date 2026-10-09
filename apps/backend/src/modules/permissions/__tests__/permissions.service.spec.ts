@@ -15,6 +15,55 @@ import { User } from '@modules/users/user.entity';
 import { PermissionEngine } from '@common/permissions/permission-engine.service';
 import { AuditLogService } from '@modules/audit-log/audit-log.module';
 import { AuditAction } from '@modules/audit-log/audit-log.entity';
+import { getPermissionsForRole } from '@common/permissions/role-permissions';
+
+/**
+ * Minimal in-memory repository used to exercise the stateful seed logic
+ * (normalization + merge + idempotency) without a real database.
+ */
+class FakeRepo<T extends { id?: string }> {
+  rows: T[] = [];
+  private seq = 0;
+  constructor(private readonly prefix: string) {}
+
+  create(obj: Partial<T>): T {
+    return { ...(obj as object) } as T;
+  }
+
+  async save(input: T | T[]): Promise<T | T[]> {
+    const items = Array.isArray(input) ? input : [input];
+    for (const item of items) {
+      if (!item.id) item.id = `${this.prefix}-${++this.seq}`;
+      const idx = this.rows.findIndex((r) => r.id === item.id);
+      if (idx >= 0) this.rows[idx] = item;
+      else this.rows.push(item);
+    }
+    return input;
+  }
+
+  async find(): Promise<T[]> {
+    return [...this.rows];
+  }
+
+  async findOne(opts?: { where?: Record<string, unknown> }): Promise<T | null> {
+    const where = opts?.where ?? {};
+    return (
+      this.rows.find((r) =>
+        Object.entries(where).every(([k, v]) => (r as Record<string, unknown>)[k] === v),
+      ) ?? null
+    );
+  }
+
+  async delete(criteria: Record<string, unknown>): Promise<void> {
+    this.rows = this.rows.filter(
+      (r) =>
+        !Object.entries(criteria).every(
+          ([k, v]) => (r as Record<string, unknown>)[k] === v,
+        ),
+    );
+  }
+}
+
 
 describe('PermissionsService', () => {
   let service: PermissionsService;
@@ -23,6 +72,8 @@ describe('PermissionsService', () => {
   let groupRepo: jest.Mocked<Repository<PermissionGroup>>;
   let userPermRepo: jest.Mocked<Repository<UserPermission>>;
   let auditLog: jest.Mocked<AuditLogService>;
+  let fakePermRepo: FakeRepo<Permission>;
+  let fakeRoleRepo: FakeRepo<Role>;
 
   const mockDate = new Date('2025-01-15T10:00:00Z');
 
@@ -88,6 +139,21 @@ describe('PermissionsService', () => {
     }) as UserPermission;
 
   beforeEach(async () => {
+    fakePermRepo = new FakeRepo<Permission>('perm');
+    fakeRoleRepo = new FakeRepo<Role>('role');
+    const fakeManager = {
+      getRepository: (entity: unknown) => {
+        if (entity === Permission) return fakePermRepo;
+        if (entity === Role) return fakeRoleRepo;
+        throw new Error('FakeRepo not registered for entity');
+      },
+      query: jest.fn().mockResolvedValue(undefined),
+    };
+    const fakeManagerRef = {
+      transaction: (cb: (m: typeof fakeManager) => unknown) => cb(fakeManager),
+      getRepository: fakeManager.getRepository,
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PermissionsService,
@@ -166,25 +232,105 @@ describe('PermissionsService', () => {
     groupRepo = module.get(getRepositoryToken(PermissionGroup));
     userPermRepo = module.get(getRepositoryToken(UserPermission));
     auditLog = module.get(AuditLogService);
+    (permRepo as unknown as { manager: unknown }).manager = fakeManagerRef;
+    (roleRepo as unknown as { manager: unknown }).manager = fakeManagerRef;
   });
 
   afterEach(() => jest.clearAllMocks());
 
   describe('seedPermissions', () => {
-    it('should return existing count if permissions exist', async () => {
-      permRepo.count.mockResolvedValue(50);
-      const result = await service.seedPermissions();
-      expect(result).toBe(50);
-      expect(permRepo.save).not.toHaveBeenCalled();
+    const legacyRow = (module: string, action: string, id: string): Permission =>
+      ({
+        id,
+        module,
+        action,
+        displayName: `${module}:${action}`,
+        isSystem: true,
+      }) as Permission;
+
+    const roleKeysOf = (name: string): string[] => {
+      const role = fakeRoleRepo.rows.find((r) => r.name === name)!;
+      return (role.permissions as Permission[])
+        .map((p) => `${p.module}:${p.action}`)
+        .sort();
+    };
+
+    it('normalizes legacy plural keys and syncs system roles to getPermissionsForRole', async () => {
+      fakePermRepo.rows = [
+        legacyRow('beneficiaries', 'view_all', 'p1'),
+        legacyRow('appointments', 'view_own', 'p2'),
+        legacyRow('sessions', 'confirm', 'p3'),
+        legacyRow('users', 'view', 'p4'),
+        legacyRow('specialists', 'view_all', 'p5'),
+      ];
+      fakeRoleRepo.rows = [];
+
+      await service.seedPermissions();
+      await service.seedRolesFromMap('admin-1');
+
+      const modules = new Set<string>(fakePermRepo.rows.map((p) => p.module));
+      for (const plural of [
+        'beneficiaries',
+        'appointments',
+        'sessions',
+        'reports',
+        'payments',
+        'files',
+        'invoices',
+        'medical_records',
+        'users',
+        'roles',
+        'permissions',
+        'notifications',
+        'specialists',
+      ]) {
+        expect(modules.has(plural)).toBe(false);
+      }
+      expect(modules.has('beneficiary')).toBe(true);
+      expect(modules.has('appointment')).toBe(true);
+      expect(
+        fakePermRepo.rows.some(
+          (p) => p.module === 'session' && p.action === 'confirm_attendance',
+        ),
+      ).toBe(true);
+
+      for (const role of ['specialist', 'accountant', 'beneficiary'] as const) {
+        expect(roleKeysOf(role)).toEqual(
+          getPermissionsForRole(role)
+            .map((p) => p.toString())
+            .sort(),
+        );
+      }
     });
 
-    it('should seed permissions if none exist', async () => {
-      permRepo.count.mockResolvedValue(0);
-      permRepo.create.mockReturnValue(makePerm());
-      permRepo.save.mockResolvedValue([] as any);
-      const result = await service.seedPermissions();
-      expect(result).toBeDefined();
-      expect(permRepo.save).toHaveBeenCalled();
+    it('is idempotent — running the seed twice changes nothing', async () => {
+      fakePermRepo.rows = [
+        legacyRow('beneficiaries', 'view_all', 'p1'),
+        legacyRow('appointments', 'view_own', 'p2'),
+      ];
+      fakeRoleRepo.rows = [];
+
+      await service.seedPermissions();
+      await service.seedRolesFromMap('admin-1');
+
+      const permSnapshot = fakePermRepo.rows
+        .map((p) => `${p.module}:${p.action}`)
+        .sort();
+      const roleSnapshot = fakeRoleRepo.rows.map((r) => ({
+        name: r.name,
+        keys: roleKeysOf(r.name),
+      }));
+
+      await service.seedPermissions();
+      await service.seedRolesFromMap('admin-1');
+
+      expect(fakePermRepo.rows.map((p) => `${p.module}:${p.action}`).sort()).toEqual(
+        permSnapshot,
+      );
+      expect(fakeRoleRepo.rows).toHaveLength(roleSnapshot.length);
+      for (const snap of roleSnapshot) {
+        expect(roleKeysOf(snap.name)).toEqual(snap.keys);
+      }
     });
   });
 
@@ -712,24 +858,30 @@ describe('PermissionsService', () => {
   });
 
   describe('seedRolesFromMap', () => {
-    it('should skip existing roles and create new ones', async () => {
-      permRepo.find.mockResolvedValue([
-        makePerm({ module: PermissionModule.BENEFICIARIES, action: PermissionAction.VIEW_ALL }),
-      ]);
-      roleRepo.findOne
-        .mockResolvedValueOnce(makeRole({ name: 'super_admin' }))
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-
-      roleRepo.create.mockReturnValue(makeRole());
-      roleRepo.save.mockResolvedValue(makeRole());
+    it('creates missing roles and syncs existing ones to getPermissionsForRole', async () => {
+      await service.seedPermissions();
+      const existing = fakeRoleRepo.create({
+        name: 'specialist',
+        isSystem: true,
+        isActive: true,
+        permissions: [],
+      });
+      await fakeRoleRepo.save(existing);
 
       const result = await service.seedRolesFromMap('user-1');
+
       expect(result).toHaveLength(7);
+      const specialist = fakeRoleRepo.rows.find((r) => r.name === 'specialist')!;
+      expect(
+        (specialist.permissions as Permission[])
+          .map((p) => `${p.module}:${p.action}`)
+          .sort(),
+      ).toEqual(
+        getPermissionsForRole('specialist')
+          .map((p) => p.toString())
+          .sort(),
+      );
+      expect(fakeRoleRepo.rows.find((r) => r.name === 'super_admin')).toBeDefined();
     });
   });
 });
