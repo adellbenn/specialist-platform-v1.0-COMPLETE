@@ -384,9 +384,6 @@ export class AuthService {
     const resetLink = `${this.configService.get<string>('app.frontendUrl', 'http://localhost:3000')}/auth/reset-password?token=${token}`;
 
     const isDev = this.configService.get<string>('app.nodeEnv', 'development') !== 'production';
-    if (isDev) {
-      console.log(`[DEV] Password reset link: ${resetLink}`);
-    }
 
     return {
       message: 'إذا كان البريد موجوداً، سيتم إرسال رابط إعادة تعيين كلمة المرور',

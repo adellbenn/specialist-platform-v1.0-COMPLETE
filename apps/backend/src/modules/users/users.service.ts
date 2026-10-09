@@ -55,23 +55,15 @@ export class UsersService implements OnModuleInit {
 
     // 3. Create super admin with the super_admin role
     const superAdminRole = roleMap.get('super_admin');
-    const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'adel.ben14789@gmail.com';
+    const adminEmail = process.env.SUPER_ADMIN_EMAIL;
+    const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
 
-    let adminPassword = process.env.SUPER_ADMIN_PASSWORD;
-    let forcePasswordChange = false;
-
-    if (!adminPassword) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'SUPER_ADMIN_PASSWORD must be set in production. ' +
-            "Generate one with: node -e \"console.log(require('crypto').randomBytes(24).toString('base64'))\"",
-        );
-      }
-      // Dev mode: generate random password, force change on first login
-      adminPassword = crypto.randomBytes(18).toString('base64');
-      forcePasswordChange = true;
-      this.logger.warn(`[DEV] Super admin generated password: ${adminPassword}`);
-      this.logger.warn('[DEV] User MUST change password on first login.');
+    if (!adminEmail || !adminPassword) {
+      const missing = [];
+      if (!adminEmail) missing.push('SUPER_ADMIN_EMAIL');
+      if (!adminPassword) missing.push('SUPER_ADMIN_PASSWORD');
+      this.logger.warn(`Skipping super admin seeding: missing environment variables ${missing.join(', ')}`);
+      return;
     }
 
     await this.userRepository.save(
@@ -83,15 +75,11 @@ export class UsersService implements OnModuleInit {
         role: UserRole.SUPER_ADMIN,
         roleId: superAdminRole?.id,
         isActive: true,
-        mustChangePassword: forcePasswordChange,
+        mustChangePassword: false,
       }),
     );
 
-    if (forcePasswordChange) {
-      this.logger.warn(`✓ Super Admin created: ${adminEmail} (MUST change password)`);
-    } else {
-      this.logger.log(`✓ Super Admin created: ${adminEmail}`);
-    }
+    this.logger.log(`✓ Super Admin created: ${adminEmail}`);
   }
 
   async create(dto: CreateUserDto, creatorRole: UserRole, creatorTenantId: string): Promise<User> {
