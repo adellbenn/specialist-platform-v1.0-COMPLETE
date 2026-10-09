@@ -74,3 +74,10 @@ infrastructure/scripts/*.mjs
 infrastructure/scripts/list-*.cjs
 infrastructure/scripts/tmp/
 
+# ─── Hardening (env + backups) ──────────────
+.env*
+!.env.example
+!.env.*.example
+backup-*
+*.sqlite-journal
+
