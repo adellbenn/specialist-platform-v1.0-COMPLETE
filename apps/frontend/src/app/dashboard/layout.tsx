@@ -518,7 +518,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             <div ref={userMenuRef} className="relative flex-shrink-0">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 h-10 rounded-[10px] px-2 transition-all duration-200 hover:bg-[var(--surface)]"
+                className="flex items-center gap-3 h-10 rounded-[10px] px-2 transition-all duration-200 hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 ring-primary/30"
                 style={{ color: 'var(--text-primary)' }}
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 bg-primary text-white shadow-xs">
@@ -550,15 +550,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
                   {/* Menu */}
                   <div className="p-1.5">
-                    <DropdownItem icon={User} label="👤 الملف الشخصي" href="/dashboard/profile" onClick={() => setUserMenuOpen(false)} />
-                    <DropdownItem icon={Settings} label="⚙️ إعدادات الحساب" href="/dashboard/settings" onClick={() => setUserMenuOpen(false)} />
-                    <DropdownItem icon={Lock} label="🔒 تغيير كلمة المرور" onClick={() => { setUserMenuOpen(false); toast('قريباً...'); }} />
+                    <DropdownItem icon={User} label="الملف الشخصي" href="/dashboard/profile" onClick={() => setUserMenuOpen(false)} />
+                    <DropdownItem icon={Settings} label="إعدادات الحساب" href="/dashboard/settings" onClick={() => setUserMenuOpen(false)} />
+                    <DropdownItem icon={Lock} label="تغيير كلمة المرور" onClick={() => { setUserMenuOpen(false); toast('قريباً...'); }} />
                   </div>
 
                   <div className="border-t" style={{ borderColor: 'var(--border)' }}>
                     <div className="p-1.5">
-                      <DropdownItem icon={Globe} label="🌐 اللغة — English" onClick={() => { setUserMenuOpen(false); setLocale(locale === 'ar' ? 'en' : 'ar'); }} />
-                      <DropdownItem icon={Moon} label="🌙 المظهر" onClick={() => { setUserMenuOpen(false); }} />
+                      <DropdownItem icon={Globe} label={`${t('user_menu.language')}: ${locale === 'ar' ? 'English' : 'العربية'}`} onClick={() => { setUserMenuOpen(false); setLocale(locale === 'ar' ? 'en' : 'ar'); }} />
+                      <DropdownItem icon={Moon} label="المظهر" onClick={() => { setUserMenuOpen(false); }} />
                     </div>
                   </div>
 
@@ -572,7 +572,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <LogOut size={16} />
-                        🚪 تسجيل الخروج
+                        تسجيل الخروج
                       </button>
                     </div>
                   </div>
