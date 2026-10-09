@@ -48,6 +48,22 @@ export class PermissionEngine {
     return { allowed: missing.length === 0, missing };
   }
 
+  async authorizeAny(
+    user: { id: string; role: UserRole; roleId?: string },
+    requiredPermissions: string[],
+  ): Promise<{ allowed: boolean; missing: string[] }> {
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return { allowed: true, missing: [] };
+    }
+
+    const effective = user.roleId
+      ? await this.getEffectivePermissions(user.id, user.roleId)
+      : this.getStaticFallback(user.role);
+
+    const hasAny = requiredPermissions.some((p) => effective.has(p));
+    return { allowed: hasAny, missing: hasAny ? [] : requiredPermissions };
+  }
+
   async getEffectivePermissions(
     userId: string,
     roleId: string,

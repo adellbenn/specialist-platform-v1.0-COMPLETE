@@ -10,11 +10,11 @@ import { Permission } from '@common/permissions/permissions.enum';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { PermissionGuard } from '@common/guards/permission.guard';
 import { RbacGuard } from '@common/guards/rbac.guard';
-import { ROLES_KEY, PERMISSIONS_KEY, SKIP_RBAC_KEY } from './keys';
+import { ROLES_KEY, PERMISSIONS_KEY, PERMISSIONS_ANY_KEY, SKIP_RBAC_KEY } from './keys';
 
 // Re-export metadata keys and simple decorators so
 // `import { Public, IS_PUBLIC_KEY } from '@common/decorators'` still works
-export { IS_PUBLIC_KEY, ROLES_KEY, PERMISSIONS_KEY, SKIP_RBAC_KEY, Public } from './keys';
+export { IS_PUBLIC_KEY, ROLES_KEY, PERMISSIONS_KEY, PERMISSIONS_ANY_KEY, SKIP_RBAC_KEY, Public } from './keys';
 
 // ═══════════════════════════════════════════════════════════════
 // BASIC DECORATORS
@@ -39,6 +39,12 @@ export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
  */
 export const RequirePermissions = (...permissions: Permission[]) =>
   applyDecorators(SetMetadata(PERMISSIONS_KEY, permissions), UseGuards(PermissionGuard));
+
+/**
+ * @RequireAnyPermission — يكفي امتلاك واحدة من الصلاحيات (OR)
+ */
+export const RequireAnyPermission = (...permissions: Permission[]) =>
+  applyDecorators(SetMetadata(PERMISSIONS_ANY_KEY, permissions), UseGuards(PermissionGuard));
 
 // ═══════════════════════════════════════════════════════════════
 // ROLE-BASED COMPOSITE DECORATORS

@@ -4,6 +4,7 @@ import {
   SkipRbac,
   Roles,
   RequirePermissions,
+  RequireAnyPermission,
   AdminOnly,
   CurrentUser,
   TenantId,
@@ -11,6 +12,7 @@ import {
   SKIP_RBAC_KEY,
   ROLES_KEY,
   PERMISSIONS_KEY,
+  PERMISSIONS_ANY_KEY,
 } from '../index';
 import { UserRole } from '@modules/users/user.entity';
 import { Permission } from '@common/permissions/permissions.enum';
@@ -55,6 +57,29 @@ describe('Decorators', () => {
       }
       const metadata = Reflect.getMetadata(PERMISSIONS_KEY, TestController.prototype.method);
       expect(metadata).toEqual(perms);
+    });
+  });
+
+  describe('@RequireAnyPermission', () => {
+    it('should set any-permission metadata (separate from AND)', () => {
+      const perms = [
+        Permission.APPOINTMENT_VIEW_ALL,
+        Permission.APPOINTMENT_VIEW_OWN,
+        Permission.APPOINTMENT_VIEW_SELF,
+      ];
+      class TestController {
+        @RequireAnyPermission(...perms) method() {}
+      }
+      const anyMeta = Reflect.getMetadata(
+        PERMISSIONS_ANY_KEY,
+        TestController.prototype.method,
+      );
+      const allMeta = Reflect.getMetadata(
+        PERMISSIONS_KEY,
+        TestController.prototype.method,
+      );
+      expect(anyMeta).toEqual(perms);
+      expect(allMeta).toBeUndefined();
     });
   });
 

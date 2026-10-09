@@ -30,6 +30,7 @@ import {
   WriterOnly,
   StaffOrBeneficiary,
   RequirePermissions,
+  RequireAnyPermission,
   CurrentUser,
   TenantId,
   BeneficiaryId,
@@ -125,7 +126,11 @@ export class BeneficiariesController {
 
   @Get()
   @AllStaff()
-  @RequirePermissions(Permission.BENEFICIARY_VIEW_ALL, Permission.BENEFICIARY_VIEW_OWN)
+  @RequireAnyPermission(
+    Permission.BENEFICIARY_VIEW_ALL,
+    Permission.BENEFICIARY_VIEW_OWN,
+    Permission.BENEFICIARY_VIEW_SELF,
+  )
   @ApiOperation({ summary: 'قائمة المستفيدين' })
   async findAll(
     @Query() query: BeneficiaryQueryDto,

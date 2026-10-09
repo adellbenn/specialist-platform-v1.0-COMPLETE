@@ -113,6 +113,56 @@ describe('PermissionEngine', () => {
     });
   });
 
+  describe('authorizeAny', () => {
+    it('returns allowed: true for SUPER_ADMIN', async () => {
+      const result = await engine.authorizeAny(
+        { id: 'u1', role: UserRole.SUPER_ADMIN },
+        ['a', 'b'],
+      );
+      expect(result).toEqual({ allowed: true, missing: [] });
+    });
+
+    it('allows when at least one permission is present', async () => {
+      redisService.getJson.mockResolvedValue(null);
+      roleRepo.findOne.mockResolvedValue({
+        permissions: [{ module: 'dashboard', action: 'view' }],
+      });
+      userPermRepo.find.mockResolvedValue([]);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await engine.authorizeAny(
+        { id: 'u1', role: UserRole.SPECIALIST, roleId: 'r1' },
+        ['user:delete', 'dashboard:view'],
+      );
+      expect(result.allowed).toBe(true);
+      expect(result.missing).toEqual([]);
+    });
+
+    it('fails when none of the permissions are present', async () => {
+      redisService.getJson.mockResolvedValue(null);
+      roleRepo.findOne.mockResolvedValue({
+        permissions: [{ module: 'dashboard', action: 'view' }],
+      });
+      userPermRepo.find.mockResolvedValue([]);
+      redisService.setJson.mockResolvedValue(undefined);
+
+      const result = await engine.authorizeAny(
+        { id: 'u1', role: UserRole.SPECIALIST, roleId: 'r1' },
+        ['user:delete', 'tenant:view'],
+      );
+      expect(result.allowed).toBe(false);
+      expect(result.missing).toEqual(['user:delete', 'tenant:view']);
+    });
+
+    it('uses static fallback when no roleId', async () => {
+      const result = await engine.authorizeAny(
+        { id: 'u1', role: UserRole.SPECIALIST },
+        ['user:delete', 'dashboard:view'],
+      );
+      expect(result.allowed).toBe(true);
+    });
+  });
+
   describe('getEffectivePermissions', () => {
     it('returns cached permissions when available', async () => {
       redisService.getJson.mockResolvedValue(['dashboard:view', 'user:create']);

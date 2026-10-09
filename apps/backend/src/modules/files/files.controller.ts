@@ -28,6 +28,7 @@ import {
   AllStaff,
   WriterOnly,
   RequirePermissions,
+  RequireAnyPermission,
   CurrentUser,
   TenantId,
 } from '@common/decorators';
@@ -74,7 +75,7 @@ export class FilesController {
    */
   @Get()
   @AllStaff()
-  @RequirePermissions(Permission.FILE_VIEW)
+  @RequireAnyPermission(Permission.FILE_VIEW, Permission.FILE_VIEW_SELF)
   @ApiOperation({ summary: 'قائمة الملفات (لكيان أو جميع الملفات)' })
   async getEntityFiles(
     @TenantId() tenantId: string,

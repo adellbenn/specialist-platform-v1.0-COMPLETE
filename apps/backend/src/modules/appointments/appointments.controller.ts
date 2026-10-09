@@ -27,6 +27,7 @@ import {
   WriterOnly,
   StaffOrBeneficiary,
   RequirePermissions,
+  RequireAnyPermission,
   CurrentUser,
   TenantId,
 } from '@common/decorators';
@@ -61,7 +62,11 @@ export class AppointmentsController {
 
   @Get()
   @StaffOrBeneficiary()
-  @RequirePermissions(Permission.APPOINTMENT_VIEW_ALL)
+  @RequireAnyPermission(
+    Permission.APPOINTMENT_VIEW_ALL,
+    Permission.APPOINTMENT_VIEW_OWN,
+    Permission.APPOINTMENT_VIEW_SELF,
+  )
   @ApiOperation({ summary: 'قائمة المواعيد' })
   async findAll(
     @Query() query: AppointmentQueryDto,

@@ -16,6 +16,7 @@ import { SetMetadata } from '@nestjs/common';
 export const IS_PUBLIC_KEY = 'isPublic';
 export const ROLES_KEY = 'roles';
 export const PERMISSIONS_KEY = 'permissions';
+export const PERMISSIONS_ANY_KEY = 'permissionsAny';
 export const SKIP_RBAC_KEY = 'skipRbac';
 
 /** مسار عام — لا يحتاج JWT (safe for circular-free imports) */
