@@ -70,6 +70,7 @@ describe('SessionsService', () => {
             save: jest.fn(),
             count: jest.fn(),
             createQueryBuilder: jest.fn(),
+            manager: { findOne: jest.fn() },
           },
         },
         {
@@ -92,6 +93,10 @@ describe('SessionsService', () => {
     sessionRepo = module.get(getRepositoryToken(Session));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
     notifications = module.get(NotificationsService);
+
+    (sessionRepo.manager.findOne as unknown as jest.Mock).mockResolvedValue(
+      makeUser(UserRole.SPECIALIST),
+    );
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -227,6 +232,73 @@ describe('SessionsService', () => {
         expect.objectContaining({ endedAt: expect.any(Date) }),
       );
     });
+
+    it('should reject a specialist from another tenant without saving or notifying', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      (sessionRepo.manager.findOne as unknown as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-1',
+            specialistId: 'spec-other-tenant',
+            startedAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(sessionRepo.manager.findOne).toHaveBeenCalledWith(User, {
+        where: { id: 'spec-other-tenant', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(sessionRepo.save).not.toHaveBeenCalled();
+      expect(notifications.broadcastSafe).not.toHaveBeenCalled();
+    });
+
+    it('should reject a non-specialist user', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      (sessionRepo.manager.findOne as unknown as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            beneficiaryId: 'ben-1',
+            specialistId: 'mgr-1',
+            startedAt: '2025-06-15T10:00:00Z',
+          } as any,
+          tenantId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(sessionRepo.manager.findOne).toHaveBeenCalledWith(User, {
+        where: { id: 'mgr-1', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(sessionRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should create and notify for a valid specialist', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      (sessionRepo.manager.findOne as unknown as jest.Mock).mockResolvedValue(
+        makeUser(UserRole.SPECIALIST),
+      );
+      sessionRepo.count.mockResolvedValue(0);
+      sessionRepo.create.mockReturnValue(makeSession());
+      sessionRepo.save.mockResolvedValue(makeSession());
+      sessionRepo.findOne.mockResolvedValue(makeSession());
+
+      await service.create(
+        {
+          beneficiaryId: 'ben-1',
+          specialistId: 'spec-1',
+          startedAt: '2025-06-15T10:00:00Z',
+        } as any,
+        tenantId,
+        'actor-1',
+      );
+
+      expect(sessionRepo.save).toHaveBeenCalled();
+      expect(notifications.broadcastSafe).toHaveBeenCalled();
+    });
   });
 
   describe('findAll', () => {
@@ -343,6 +415,20 @@ describe('SessionsService', () => {
         tenantId,
       );
       expect(sessionRepo.save).toHaveBeenCalled();
+    });
+
+    it('should reject a specialist from another tenant on update', async () => {
+      sessionRepo.findOne.mockResolvedValue(makeSession());
+      (sessionRepo.manager.findOne as unknown as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.update('sess-1', { specialistId: 'spec-other-tenant' } as any, tenantId),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(sessionRepo.manager.findOne).toHaveBeenCalledWith(User, {
+        where: { id: 'spec-other-tenant', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(sessionRepo.save).not.toHaveBeenCalled();
     });
   });
 

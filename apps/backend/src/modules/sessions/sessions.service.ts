@@ -31,6 +31,11 @@ export class SessionsService {
     });
     if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
 
+    const specialist = await this.sessionRepo.manager.findOne(User, {
+      where: { id: dto.specialistId, tenantId, role: UserRole.SPECIALIST },
+    });
+    if (!specialist) throw new BadRequestException('الأخصائي غير موجود في هذا المركز');
+
     const count = await this.sessionRepo.count({
       where: { beneficiaryId: dto.beneficiaryId, tenantId },
     });
@@ -143,6 +148,21 @@ export class SessionsService {
     requestingUser?: User,
   ): Promise<Session> {
     const session = await this.findOne(id, tenantId, requestingUser);
+
+    if (dto.specialistId) {
+      const specialist = await this.sessionRepo.manager.findOne(User, {
+        where: { id: dto.specialistId, tenantId, role: UserRole.SPECIALIST },
+      });
+      if (!specialist) throw new BadRequestException('الأخصائي غير موجود في هذا المركز');
+    }
+
+    if (dto.beneficiaryId) {
+      const beneficiary = await this.beneficiaryRepo.findOne({
+        where: { id: dto.beneficiaryId, tenantId },
+      });
+      if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+
     Object.assign(session, {
       ...dto,
       startedAt: dto.startedAt ? new Date(dto.startedAt) : session.startedAt,
