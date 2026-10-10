@@ -55,6 +55,7 @@ import { MustChangePasswordGuard } from '@common/guards/must-change-password.gua
 import { GlobalExceptionFilter } from '@common/filters/global-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
 import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.interceptor';
+import { AuditInterceptor } from '@common/interceptors/audit.interceptor';
 // import { RbacMiddleware } from '@common/middleware/rbac.middleware';
 
 @Module({
@@ -196,6 +197,7 @@ import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.in
     { provide: APP_INTERCEPTOR, useClass: CorrelationIdInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     DatabaseMetricsService,
     AppMetricsService,
     VirusScannerService,
