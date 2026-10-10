@@ -11,6 +11,7 @@ import { Appointment, AppointmentStatus, AppointmentType } from '../appointment.
 import { Session } from '@modules/sessions/session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
 
 describe('AppointmentsService', () => {
   let service: AppointmentsService;
@@ -18,6 +19,7 @@ describe('AppointmentsService', () => {
   let sessionRepo: jest.Mocked<Repository<Session>>;
   let userRepo: jest.Mocked<Repository<User>>;
   let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
+  let notifications: { createSafe: jest.Mock; broadcastSafe: jest.Mock };
 
   const tenantId = 'tenant-1';
   const specialistId = 'spec-1';
@@ -100,6 +102,13 @@ describe('AppointmentsService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createSafe: jest.fn().mockResolvedValue(undefined),
+            broadcastSafe: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -108,6 +117,7 @@ describe('AppointmentsService', () => {
     sessionRepo = module.get(getRepositoryToken(Session));
     userRepo = module.get(getRepositoryToken(User));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
+    notifications = module.get(NotificationsService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -746,6 +756,68 @@ describe('AppointmentsService', () => {
 
       const result = await service.getStats(tenantId);
       expect(result.completionRate).toBe(0);
+    });
+  });
+
+  describe('notification failure isolation', () => {
+    beforeEach(() => {
+      notifications.broadcastSafe.mockRejectedValue(new Error('notifications down'));
+    });
+
+    it('create succeeds even if notification delivery fails', async () => {
+      setupConflictQb([]);
+      userRepo.findOne.mockResolvedValue(makeUser());
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      appointmentRepo.create.mockReturnValue(makeAppointment());
+      appointmentRepo.save.mockResolvedValue(makeAppointment());
+      appointmentRepo.findOne.mockResolvedValue(makeAppointment());
+
+      await expect(
+        service.create(
+          { beneficiaryId, specialistId, scheduledAt: '2025-06-15T10:00:00Z' } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('confirm succeeds even if notification delivery fails', async () => {
+      appointmentRepo.findOne.mockResolvedValue(
+        makeAppointment({ status: AppointmentStatus.SCHEDULED }),
+      );
+      appointmentRepo.save.mockResolvedValue(makeAppointment());
+
+      await expect(service.confirm('apt-1', tenantId, 'actor')).resolves.toBeDefined();
+    });
+
+    it('cancel succeeds even if notification delivery fails', async () => {
+      appointmentRepo.findOne.mockResolvedValue(
+        makeAppointment({ status: AppointmentStatus.SCHEDULED }),
+      );
+      appointmentRepo.save.mockResolvedValue(makeAppointment());
+
+      await expect(service.cancel('apt-1', 'reason', tenantId, 'actor')).resolves.toBeDefined();
+    });
+
+    it('markNoShow succeeds even if notification delivery fails', async () => {
+      appointmentRepo.findOne.mockResolvedValue(makeAppointment());
+      appointmentRepo.save.mockResolvedValue(makeAppointment());
+
+      await expect(service.markNoShow('apt-1', tenantId, 'actor')).resolves.toBeDefined();
+    });
+
+    it('complete succeeds even if notification delivery fails', async () => {
+      appointmentRepo.findOne.mockResolvedValue(
+        makeAppointment({ status: AppointmentStatus.SCHEDULED }),
+      );
+      sessionRepo.count.mockResolvedValue(0);
+      appointmentRepo.save.mockResolvedValue(makeAppointment());
+      sessionRepo.create.mockReturnValue({} as any);
+      sessionRepo.save.mockResolvedValue({ id: 'sess-1' } as any);
+
+      await expect(
+        service.complete('apt-1', {} as any, tenantId, specialistId),
+      ).resolves.toBeDefined();
     });
   });
 });

@@ -159,8 +159,12 @@ export class AppointmentsController {
   @WriterOnly()
   @RequirePermissions(Permission.APPOINTMENT_CONFIRM)
   @ApiOperation({ summary: 'تأكيد الموعد' })
-  async confirm(@Param('id') id: string, @TenantId() tenantId: string) {
-    const result = await this.service.confirm(id, tenantId);
+  async confirm(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.confirm(id, tenantId, user.id);
     return { data: result, message: 'تم تأكيد الموعد' };
   }
 
@@ -174,8 +178,9 @@ export class AppointmentsController {
     @Param('id') id: string,
     @Body('reason') reason: string,
     @TenantId() tenantId: string,
+    @CurrentUser() user: User,
   ) {
-    const result = await this.service.cancel(id, reason, tenantId);
+    const result = await this.service.cancel(id, reason, tenantId, user.id);
     return { data: result, message: 'تم إلغاء الموعد' };
   }
 
@@ -185,8 +190,12 @@ export class AppointmentsController {
   @WriterOnly()
   @RequirePermissions(Permission.APPOINTMENT_UPDATE)
   @ApiOperation({ summary: 'تسجيل عدم الحضور' })
-  async markNoShow(@Param('id') id: string, @TenantId() tenantId: string) {
-    const result = await this.service.markNoShow(id, tenantId);
+  async markNoShow(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.markNoShow(id, tenantId, user.id);
     return { data: result, message: 'تم تسجيل عدم الحضور' };
   }
 

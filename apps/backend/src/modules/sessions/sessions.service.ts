@@ -1,22 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Session, AttendanceStatus } from './session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import { NotificationType } from '@modules/notifications/notification.entity';
 import { CreateSessionDto, UpdateSessionDto, SessionQueryDto } from './dto/session.dto';
 
 @Injectable()
 export class SessionsService {
+  private readonly logger = new Logger(SessionsService.name);
+
   constructor(
     @InjectRepository(Session)
     private sessionRepo: Repository<Session>,
 
     @InjectRepository(Beneficiary)
     private beneficiaryRepo: Repository<Beneficiary>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
-  async create(dto: CreateSessionDto, tenantId: string): Promise<Session> {
+  async create(dto: CreateSessionDto, tenantId: string, actorId?: string): Promise<Session> {
     if (!dto.beneficiaryId) {
       throw new BadRequestException('المستفيد غير موجود في هذا المركز');
     }
@@ -38,6 +44,22 @@ export class SessionsService {
     });
 
     const saved = await this.sessionRepo.save(session);
+
+    try {
+      const recipients = saved.specialistId && saved.specialistId !== actorId
+        ? [saved.specialistId]
+        : [];
+      await this.notificationsService.broadcastSafe(recipients, {
+        tenantId,
+        type: NotificationType.SESSION_DUE,
+        title: 'جلسة جديدة',
+        message: `تم تسجيل جلسة جديدة للمستفيد رقم ${beneficiary.fileNumber}.`,
+        link: `/dashboard/sessions/${saved.id}`,
+      });
+    } catch (error) {
+      this.logger.warn(`تعذّر إرسال إشعار الجلسة: ${(error as Error)?.message ?? error}`);
+    }
+
     return this.findOne(saved.id, tenantId);
   }
 

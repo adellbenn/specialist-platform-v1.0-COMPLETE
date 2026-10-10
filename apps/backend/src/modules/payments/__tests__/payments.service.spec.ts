@@ -7,6 +7,8 @@ import { ServicePackage } from '../service-package.entity';
 import { Subscription, SubscriptionStatus } from '../subscription.entity';
 import { Invoice, PaymentStatus, PaymentMethod } from '../invoice.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { User } from '@modules/users/user.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
@@ -14,6 +16,7 @@ describe('PaymentsService', () => {
   let subscriptionRepo: jest.Mocked<Repository<Subscription>>;
   let invoiceRepo: jest.Mocked<Repository<Invoice>>;
   let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
+  let notifications: { createSafe: jest.Mock; broadcastSafe: jest.Mock };
 
   const tenantId = 'tenant-1';
 
@@ -129,6 +132,20 @@ describe('PaymentsService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createSafe: jest.fn().mockResolvedValue(undefined),
+            broadcastSafe: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -137,6 +154,7 @@ describe('PaymentsService', () => {
     subscriptionRepo = module.get(getRepositoryToken(Subscription));
     invoiceRepo = module.get(getRepositoryToken(Invoice));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
+    notifications = module.get(NotificationsService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -658,6 +676,42 @@ describe('PaymentsService', () => {
       expect(result.activeSubscriptions).toBe(10);
       expect(result.totalRevenue).toBe(5000);
       expect(result.monthRevenue).toBe(5000);
+    });
+  });
+
+  describe('notification failure isolation', () => {
+    beforeEach(() => {
+      notifications.broadcastSafe.mockRejectedValue(new Error('notifications down'));
+    });
+
+    it('createInvoice succeeds even if notification delivery fails', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      invoiceRepo.count.mockResolvedValue(0);
+      invoiceRepo.create.mockReturnValue(makeInvoice());
+      invoiceRepo.save.mockResolvedValue(makeInvoice());
+      invoiceRepo.findOne.mockResolvedValue(makeInvoice());
+
+      await expect(
+        service.createInvoice({ beneficiaryId: 'ben-1', amount: 500 } as any, tenantId, 'user-1'),
+      ).resolves.toBeDefined();
+    });
+
+    it('markAsPaid succeeds even if notification delivery fails', async () => {
+      const inv = makeInvoice({ paymentStatus: PaymentStatus.PENDING });
+      invoiceRepo.findOne.mockResolvedValue(inv);
+      invoiceRepo.save.mockResolvedValue(inv);
+
+      await expect(
+        service.markAsPaid('inv-1', { paymentMethod: PaymentMethod.CASH } as any, tenantId, 'actor'),
+      ).resolves.toBeDefined();
+    });
+
+    it('refund succeeds even if notification delivery fails', async () => {
+      const inv = makeInvoice({ paymentStatus: PaymentStatus.PAID });
+      invoiceRepo.findOne.mockResolvedValue(inv);
+      invoiceRepo.save.mockResolvedValue(inv);
+
+      await expect(service.refund('inv-1', tenantId, 'actor')).resolves.toBeDefined();
     });
   });
 });

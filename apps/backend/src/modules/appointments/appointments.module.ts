@@ -6,9 +6,13 @@ import { Appointment } from './appointment.entity';
 import { Session } from '@modules/sessions/session.entity';
 import { User } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Appointment, Session, User, Beneficiary])],
+  imports: [
+    TypeOrmModule.forFeature([Appointment, Session, User, Beneficiary]),
+    NotificationsModule,
+  ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
   exports: [AppointmentsService],

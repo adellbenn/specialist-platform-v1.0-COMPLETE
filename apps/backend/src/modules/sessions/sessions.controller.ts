@@ -27,8 +27,12 @@ export class SessionsController {
   @WriterOnly()
   @RequirePermissions(Permission.SESSION_CREATE)
   @ApiOperation({ summary: 'تسجيل جلسة جديدة' })
-  async create(@Body() dto: CreateSessionDto, @TenantId() tenantId: string) {
-    const result = await this.service.create(dto, tenantId);
+  async create(
+    @Body() dto: CreateSessionDto,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.create(dto, tenantId, user.id);
     return { data: result, message: 'تم تسجيل الجلسة بنجاح' };
   }
 

@@ -3,12 +3,15 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Report, ReportStatus, ReportType } from './report.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import { NotificationType } from '@modules/notifications/notification.entity';
 import {
   CreateReportDto,
   UpdateReportDto,
@@ -18,12 +21,19 @@ import {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     @InjectRepository(Report)
     private reportRepo: Repository<Report>,
 
     @InjectRepository(Beneficiary)
     private beneficiaryRepo: Repository<Beneficiary>,
+
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── CREATE ───────────────────────────────────────────────
@@ -167,6 +177,21 @@ export class ReportsService {
 
     report.status = ReportStatus.SUBMITTED;
     await this.reportRepo.save(report);
+
+    await this.safeNotify(
+      async () => {
+        const managerIds = await this.getManagerIds(tenantId);
+        return managerIds.filter((id) => id !== requestingUser.id);
+      },
+      tenantId,
+      {
+        type: NotificationType.REPORT_SUBMITTED,
+        title: 'تقرير بانتظار المراجعة',
+        message: `تم تقديم تقرير للمستفيد رقم ${report.beneficiary?.fileNumber ?? ''} للمراجعة.`,
+        link: `/dashboard/reports/${report.id}`,
+      },
+    );
+
     return this.findOne(id, tenantId);
   }
 
@@ -189,6 +214,18 @@ export class ReportsService {
     report.approvedAt = new Date();
 
     await this.reportRepo.save(report);
+
+    await this.safeNotify(
+      () => (report.specialistId && report.specialistId !== approverId ? [report.specialistId] : []),
+      tenantId,
+      {
+        type: NotificationType.REPORT_APPROVED,
+        title: 'تمت الموافقة على تقريرك',
+        message: `تمت الموافقة على تقرير المستفيد رقم ${report.beneficiary?.fileNumber ?? ''}.`,
+        link: `/dashboard/reports/${report.id}`,
+      },
+    );
+
     return this.findOne(id, tenantId);
   }
 
@@ -217,6 +254,23 @@ export class ReportsService {
 
     report.sharedWithBeneficiary = !report.sharedWithBeneficiary;
     await this.reportRepo.save(report);
+
+    if (report.sharedWithBeneficiary) {
+      await this.safeNotify(
+        async () => {
+          const linkedUserId = await this.getBeneficiaryUserId(report.beneficiaryId, tenantId);
+          return linkedUserId && linkedUserId !== requestingUser?.id ? [linkedUserId] : [];
+        },
+        tenantId,
+        {
+          type: NotificationType.SYSTEM,
+          title: 'تقرير جديد متاح',
+          message: `تمت مشاركة تقرير جديد معك للملف رقم ${report.beneficiary?.fileNumber ?? ''}.`,
+          link: `/dashboard/reports/${report.id}`,
+        },
+      );
+    }
+
     return this.findOne(id, tenantId);
   }
 
@@ -233,6 +287,49 @@ export class ReportsService {
 
     report.status = ReportStatus.ARCHIVED;
     await this.reportRepo.save(report);
+  }
+
+  // ─── PRIVATE: Notification Recipients ─────────────────────
+
+  /**
+   * إرسال إشعارات بشكل آمن: أي فشل في تحديد المستلمين أو الإرسال
+   * لا يؤثر على العملية الأساسية.
+   */
+  private async safeNotify(
+    resolveRecipients: () => string[] | Promise<string[]>,
+    tenantId: string,
+    dto: { type: NotificationType; title: string; message: string; link?: string },
+  ): Promise<void> {
+    try {
+      const recipients = await resolveRecipients();
+      await this.notificationsService.broadcastSafe(recipients, { tenantId, ...dto });
+    } catch (error) {
+      this.logger.warn(
+        `تعذّر إرسال إشعار التقارير: ${(error as Error)?.message ?? error}`,
+      );
+    }
+  }
+
+  /** معرّفات المشرفين ومدراء المركز */
+  private async getManagerIds(tenantId: string): Promise<string[]> {
+    const users = await this.userRepo.find({
+      where: { tenantId, role: In([UserRole.CENTER_MANAGER, UserRole.SUPERVISOR]) },
+      select: { id: true },
+    });
+    return (users ?? []).map((u) => u.id);
+  }
+
+  /** معرّف حساب المستفيد المرتبط (إن وُجد) */
+  private async getBeneficiaryUserId(
+    beneficiaryId: string,
+    tenantId: string,
+  ): Promise<string | null> {
+    if (!beneficiaryId) return null;
+    const user = await this.userRepo.findOne({
+      where: { beneficiaryId, tenantId, role: UserRole.BENEFICIARY },
+      select: { id: true },
+    });
+    return user?.id ?? null;
   }
 
   // ─── STATS ────────────────────────────────────────────────

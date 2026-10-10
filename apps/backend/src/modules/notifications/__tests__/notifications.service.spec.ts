@@ -163,4 +163,79 @@ describe('NotificationsService', () => {
       expect(mockQb.execute).toHaveBeenCalled();
     });
   });
+
+  describe('createSafe', () => {
+    it('should create a notification when the repository succeeds', async () => {
+      notifRepo.create.mockReturnValue(makeNotification());
+      notifRepo.save.mockResolvedValue(makeNotification());
+
+      await service.createSafe({
+        userId: 'user-1',
+        type: NotificationType.SYSTEM,
+        title: 'Alert',
+        message: 'msg',
+      });
+      expect(notifRepo.save).toHaveBeenCalled();
+    });
+
+    it('should swallow repository errors so callers are unaffected', async () => {
+      notifRepo.create.mockReturnValue(makeNotification());
+      notifRepo.save.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.createSafe({
+          userId: 'user-1',
+          type: NotificationType.SYSTEM,
+          title: 'Alert',
+          message: 'msg',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should no-op when userId is missing', async () => {
+      await service.createSafe({
+        userId: '' as any,
+        type: NotificationType.SYSTEM,
+        title: 'Alert',
+        message: 'msg',
+      });
+      expect(notifRepo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('broadcastSafe', () => {
+    it('should dedupe recipients and ignore empty ids', async () => {
+      notifRepo.create.mockReturnValue(makeNotification());
+      notifRepo.save.mockResolvedValue([] as any);
+
+      await service.broadcastSafe(['user-1', 'user-1', '', null as any], {
+        type: NotificationType.SYSTEM,
+        title: 'Alert',
+        message: 'msg',
+      });
+      expect(notifRepo.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not call broadcast when there are no recipients', async () => {
+      await service.broadcastSafe([], {
+        type: NotificationType.SYSTEM,
+        title: 'Alert',
+        message: 'msg',
+      });
+      expect(notifRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should swallow repository errors so callers are unaffected', async () => {
+      notifRepo.create.mockReturnValue(makeNotification());
+      notifRepo.save.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.broadcastSafe(['user-1'], {
+          type: NotificationType.SYSTEM,
+          title: 'Alert',
+          message: 'msg',
+        }),
+      ).resolves.toBeUndefined();
+    });
+  });
 });

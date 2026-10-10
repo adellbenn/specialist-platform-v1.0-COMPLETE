@@ -3,13 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual, In } from 'typeorm';
 import { Appointment, AppointmentStatus, AppointmentType } from './appointment.entity';
 import { Session } from '@modules/sessions/session.entity';
 import { User, UserRole } from '@modules/users/user.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import { NotificationType } from '@modules/notifications/notification.entity';
 import {
   CreateAppointmentDto,
   UpdateAppointmentDto,
@@ -19,6 +22,8 @@ import { CreateSessionDto } from '@modules/sessions/dto/session.dto';
 
 @Injectable()
 export class AppointmentsService {
+  private readonly logger = new Logger(AppointmentsService.name);
+
   constructor(
     @InjectRepository(Appointment)
     private appointmentRepo: Repository<Appointment>,
@@ -31,6 +36,8 @@ export class AppointmentsService {
 
     @InjectRepository(Beneficiary)
     private beneficiaryRepo: Repository<Beneficiary>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── CREATE ───────────────────────────────────────────────
@@ -65,6 +72,18 @@ export class AppointmentsService {
     });
 
     const saved = await this.appointmentRepo.save(appointment);
+
+    await this.safeNotify(
+      () => (dto.specialistId && dto.specialistId !== createdById ? [dto.specialistId] : []),
+      tenantId,
+      {
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: 'موعد جديد',
+        message: `تم إسناد موعد جديد لك للمستفيد رقم ${beneficiary.fileNumber} بتاريخ ${saved.scheduledAt.toLocaleString('ar-SA')}.`,
+        link: `/dashboard/appointments/${saved.id}`,
+      },
+    );
+
     return this.findOne(saved.id, tenantId);
   }
 
@@ -255,17 +274,37 @@ export class AppointmentsService {
 
   // ─── CONFIRM / CANCEL ─────────────────────────────────────
 
-  async confirm(id: string, tenantId: string): Promise<Appointment> {
+  async confirm(id: string, tenantId: string, actorId?: string): Promise<Appointment> {
     const appointment = await this.findOne(id, tenantId);
     if (appointment.status !== AppointmentStatus.SCHEDULED) {
       throw new BadRequestException('يمكن تأكيد المواعيد المجدولة فقط');
     }
     appointment.status = AppointmentStatus.CONFIRMED;
     await this.appointmentRepo.save(appointment);
+
+    await this.safeNotify(
+      async () => {
+        const linkedUserId = await this.getBeneficiaryUserId(appointment.beneficiaryId, tenantId);
+        return linkedUserId && linkedUserId !== actorId ? [linkedUserId] : [];
+      },
+      tenantId,
+      {
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: 'تم تأكيد موعدك',
+        message: `تم تأكيد موعدك بتاريخ ${appointment.scheduledAt.toLocaleString('ar-SA')}.`,
+        link: `/dashboard/appointments/${appointment.id}`,
+      },
+    );
+
     return this.findOne(id, tenantId);
   }
 
-  async cancel(id: string, reason: string, tenantId: string): Promise<Appointment> {
+  async cancel(
+    id: string,
+    reason: string,
+    tenantId: string,
+    actorId?: string,
+  ): Promise<Appointment> {
     const appointment = await this.findOne(id, tenantId);
     if ([AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED].includes(appointment.status)) {
       throw new BadRequestException('لا يمكن إلغاء هذا الموعد');
@@ -273,15 +312,45 @@ export class AppointmentsService {
     appointment.status = AppointmentStatus.CANCELLED;
     appointment.cancellationReason = reason;
     await this.appointmentRepo.save(appointment);
+
+    await this.safeNotify(
+      async () => {
+        const staffIds = await this.getReceptionAndManagerIds(tenantId);
+        return [appointment.specialistId, ...staffIds].filter((uid) => uid && uid !== actorId);
+      },
+      tenantId,
+      {
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: 'تم إلغاء موعد',
+        message: `تم إلغاء الموعد الخاص بالمستفيد رقم ${appointment.beneficiary?.fileNumber ?? ''}.`,
+        link: `/dashboard/appointments/${appointment.id}`,
+      },
+    );
+
     return this.findOne(id, tenantId);
   }
 
   // ─── MARK NO SHOW ─────────────────────────────────────────
 
-  async markNoShow(id: string, tenantId: string): Promise<Appointment> {
+  async markNoShow(id: string, tenantId: string, actorId?: string): Promise<Appointment> {
     const appointment = await this.findOne(id, tenantId);
     appointment.status = AppointmentStatus.NO_SHOW;
     await this.appointmentRepo.save(appointment);
+
+    await this.safeNotify(
+      async () => {
+        const staffIds = await this.getReceptionAndManagerIds(tenantId);
+        return [appointment.specialistId, ...staffIds].filter((uid) => uid && uid !== actorId);
+      },
+      tenantId,
+      {
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: 'تسجيل عدم حضور',
+        message: `تم تسجيل عدم حضور المستفيد رقم ${appointment.beneficiary?.fileNumber ?? ''}.`,
+        link: `/dashboard/appointments/${appointment.id}`,
+      },
+    );
+
     return this.findOne(id, tenantId);
   }
 
@@ -334,6 +403,21 @@ export class AppointmentsService {
         tenantId,
         sessionNumber: sessionCount + 1,
       }),
+    );
+
+    const actorId = requestingUser?.id ?? specialistId;
+    await this.safeNotify(
+      async () => {
+        const linkedUserId = await this.getBeneficiaryUserId(appointment.beneficiaryId, tenantId);
+        return linkedUserId && linkedUserId !== actorId ? [linkedUserId] : [];
+      },
+      tenantId,
+      {
+        type: NotificationType.APPOINTMENT_REMINDER,
+        title: 'تم إتمام الموعد',
+        message: `تم إتمام الموعد وتسجيل الجلسة للمستفيد رقم ${appointment.beneficiary?.fileNumber ?? ''}.`,
+        link: `/dashboard/sessions/${session.id}`,
+      },
     );
 
     return { appointment: await this.findOne(id, tenantId), session };
@@ -389,6 +473,52 @@ export class AppointmentsService {
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { total, thisMonth, completed, cancelled, noShow, upcoming, completionRate };
+  }
+
+  // ─── PRIVATE: Notification Recipients ─────────────────────
+
+  /**
+   * إرسال إشعارات بشكل آمن: أي فشل في تحديد المستلمين أو الإرسال
+   * لا يؤثر على العملية الأساسية.
+   */
+  private async safeNotify(
+    resolveRecipients: () => string[] | Promise<string[]>,
+    tenantId: string,
+    dto: { type: NotificationType; title: string; message: string; link?: string },
+  ): Promise<void> {
+    try {
+      const recipients = await resolveRecipients();
+      await this.notificationsService.broadcastSafe(recipients, { tenantId, ...dto });
+    } catch (error) {
+      this.logger.warn(
+        `تعذّر إرسال إشعار المواعيد: ${(error as Error)?.message ?? error}`,
+      );
+    }
+  }
+
+  /** معرّف حساب المستفيد المرتبط (إن وُجد) */
+  private async getBeneficiaryUserId(
+    beneficiaryId: string,
+    tenantId: string,
+  ): Promise<string | null> {
+    if (!beneficiaryId) return null;
+    const user = await this.userRepo.findOne({
+      where: { beneficiaryId, tenantId, role: UserRole.BENEFICIARY },
+      select: { id: true },
+    });
+    return user?.id ?? null;
+  }
+
+  /** معرّفات موظفي الاستقبال والإدارة في المركز */
+  private async getReceptionAndManagerIds(tenantId: string): Promise<string[]> {
+    const users = await this.userRepo.find({
+      where: {
+        tenantId,
+        role: In([UserRole.CENTER_MANAGER, UserRole.SUPERVISOR, UserRole.RECEPTIONIST]),
+      },
+      select: { id: true },
+    });
+    return (users ?? []).map((u) => u.id);
   }
 
   // ─── PRIVATE: Conflict Check ──────────────────────────────

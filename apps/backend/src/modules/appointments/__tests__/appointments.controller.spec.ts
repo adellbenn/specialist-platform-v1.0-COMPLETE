@@ -157,9 +157,9 @@ describe('AppointmentsController', () => {
       const result = { id: 'apt-1', status: 'confirmed' };
       service.confirm.mockResolvedValue(result);
 
-      const response = await controller.confirm('apt-1', 'tenant-1');
+      const response = await controller.confirm('apt-1', 'tenant-1', mockUser);
 
-      expect(service.confirm).toHaveBeenCalledWith('apt-1', 'tenant-1');
+      expect(service.confirm).toHaveBeenCalledWith('apt-1', 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم تأكيد الموعد' });
     });
   });
@@ -169,9 +169,9 @@ describe('AppointmentsController', () => {
       const result = { id: 'apt-1', status: 'cancelled' };
       service.cancel.mockResolvedValue(result);
 
-      const response = await controller.cancel('apt-1', 'Patient request', 'tenant-1');
+      const response = await controller.cancel('apt-1', 'Patient request', 'tenant-1', mockUser);
 
-      expect(service.cancel).toHaveBeenCalledWith('apt-1', 'Patient request', 'tenant-1');
+      expect(service.cancel).toHaveBeenCalledWith('apt-1', 'Patient request', 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم إلغاء الموعد' });
     });
   });
@@ -181,9 +181,9 @@ describe('AppointmentsController', () => {
       const result = { id: 'apt-1', status: 'no_show' };
       service.markNoShow.mockResolvedValue(result);
 
-      const response = await controller.markNoShow('apt-1', 'tenant-1');
+      const response = await controller.markNoShow('apt-1', 'tenant-1', mockUser);
 
-      expect(service.markNoShow).toHaveBeenCalledWith('apt-1', 'tenant-1');
+      expect(service.markNoShow).toHaveBeenCalledWith('apt-1', 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم تسجيل عدم الحضور' });
     });
   });

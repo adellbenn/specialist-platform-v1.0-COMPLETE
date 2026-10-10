@@ -23,9 +23,9 @@ describe('SessionsController', () => {
       const result = { id: 'sess-1' };
       service.create.mockResolvedValue(result);
 
-      const response = await controller.create(dto as any, 'tenant-1');
+      const response = await controller.create(dto as any, 'tenant-1', mockUser);
 
-      expect(service.create).toHaveBeenCalledWith(dto, 'tenant-1');
+      expect(service.create).toHaveBeenCalledWith(dto, 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم تسجيل الجلسة بنجاح' });
     });
   });

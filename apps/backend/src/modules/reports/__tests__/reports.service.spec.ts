@@ -6,11 +6,13 @@ import { ReportsService } from '../reports.service';
 import { Report, ReportStatus, ReportType } from '../report.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
 
 describe('ReportsService', () => {
   let service: ReportsService;
   let reportRepo: jest.Mocked<Repository<Report>>;
   let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
+  let notifications: { createSafe: jest.Mock; broadcastSafe: jest.Mock };
 
   const tenantId = 'tenant-1';
 
@@ -79,12 +81,27 @@ describe('ReportsService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createSafe: jest.fn().mockResolvedValue(undefined),
+            broadcastSafe: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get(ReportsService);
     reportRepo = module.get(getRepositoryToken(Report));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
+    notifications = module.get(NotificationsService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -468,6 +485,40 @@ describe('ReportsService', () => {
       expect(result.approved).toBe(30);
       expect(result.archived).toBe(5);
       expect(result.byType).toHaveLength(1);
+    });
+  });
+
+  describe('notification failure isolation', () => {
+    beforeEach(() => {
+      notifications.broadcastSafe.mockRejectedValue(new Error('notifications down'));
+    });
+
+    it('submit succeeds even if notification delivery fails', async () => {
+      const report = makeReport({ status: ReportStatus.DRAFT });
+      reportRepo.findOne.mockResolvedValue(report);
+      reportRepo.save.mockResolvedValue(report);
+
+      await expect(
+        service.submit('rpt-1', tenantId, makeUser(UserRole.SPECIALIST)),
+      ).resolves.toBeDefined();
+    });
+
+    it('approve succeeds even if notification delivery fails', async () => {
+      const report = makeReport({ status: ReportStatus.SUBMITTED });
+      reportRepo.findOne.mockResolvedValue(report);
+      reportRepo.save.mockResolvedValue(report);
+
+      await expect(
+        service.approve('rpt-1', {} as any, tenantId, 'admin-1'),
+      ).resolves.toBeDefined();
+    });
+
+    it('toggleShare succeeds even if notification delivery fails', async () => {
+      const report = makeReport({ sharedWithBeneficiary: false, status: ReportStatus.APPROVED });
+      reportRepo.findOne.mockResolvedValue(report);
+      reportRepo.save.mockResolvedValue(report);
+
+      await expect(service.toggleShare('rpt-1', tenantId)).resolves.toBeDefined();
     });
   });
 });

@@ -6,11 +6,13 @@ import { SessionsService } from '../sessions.service';
 import { Session, AttendanceStatus } from '../session.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
 import { User, UserRole } from '@modules/users/user.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
 
 describe('SessionsService', () => {
   let service: SessionsService;
   let sessionRepo: jest.Mocked<Repository<Session>>;
   let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
+  let notifications: { createSafe: jest.Mock; broadcastSafe: jest.Mock };
 
   const tenantId = 'tenant-1';
 
@@ -76,12 +78,20 @@ describe('SessionsService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createSafe: jest.fn().mockResolvedValue(undefined),
+            broadcastSafe: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get(SessionsService);
     sessionRepo = module.get(getRepositoryToken(Session));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
+    notifications = module.get(NotificationsService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -361,6 +371,25 @@ describe('SessionsService', () => {
 
       const result = await service.getStats(tenantId);
       expect(result.attendanceRate).toBe(0);
+    });
+  });
+
+  describe('notification failure isolation', () => {
+    it('create succeeds even if notification delivery fails', async () => {
+      notifications.broadcastSafe.mockRejectedValue(new Error('notifications down'));
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      sessionRepo.count.mockResolvedValue(0);
+      sessionRepo.create.mockReturnValue(makeSession());
+      sessionRepo.save.mockResolvedValue(makeSession());
+      sessionRepo.findOne.mockResolvedValue(makeSession());
+
+      await expect(
+        service.create(
+          { beneficiaryId: 'ben-1', specialistId: 'spec-1', startedAt: '2025-06-15T10:00:00Z' } as any,
+          tenantId,
+          'actor-1',
+        ),
+      ).resolves.toBeDefined();
     });
   });
 });

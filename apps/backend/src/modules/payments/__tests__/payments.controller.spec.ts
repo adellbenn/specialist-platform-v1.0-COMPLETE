@@ -193,9 +193,9 @@ describe('PaymentsController', () => {
       const result = { id: 'inv-1', paymentStatus: 'paid' };
       service.markAsPaid.mockResolvedValue(result);
 
-      const response = await controller.markPaid('inv-1', dto as any, 'tenant-1');
+      const response = await controller.markPaid('inv-1', dto as any, 'tenant-1', mockUser);
 
-      expect(service.markAsPaid).toHaveBeenCalledWith('inv-1', dto, 'tenant-1');
+      expect(service.markAsPaid).toHaveBeenCalledWith('inv-1', dto, 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم تسجيل الدفع بنجاح' });
     });
   });
@@ -205,9 +205,9 @@ describe('PaymentsController', () => {
       const result = { id: 'inv-1', paymentStatus: 'refunded' };
       service.refund.mockResolvedValue(result);
 
-      const response = await controller.refund('inv-1', 'tenant-1');
+      const response = await controller.refund('inv-1', 'tenant-1', mockUser);
 
-      expect(service.refund).toHaveBeenCalledWith('inv-1', 'tenant-1');
+      expect(service.refund).toHaveBeenCalledWith('inv-1', 'tenant-1', 'user-1');
       expect(response).toEqual({ data: result, message: 'تم استرداد المبلغ' });
     });
   });

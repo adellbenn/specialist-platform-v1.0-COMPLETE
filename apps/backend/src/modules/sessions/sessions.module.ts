@@ -4,9 +4,10 @@ import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
 import { Session } from './session.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session, Beneficiary])],
+  imports: [TypeOrmModule.forFeature([Session, Beneficiary]), NotificationsModule],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService],

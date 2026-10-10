@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual, FindOptionsWhere } from 'typeorm';
@@ -10,6 +11,9 @@ import { ServicePackage } from './service-package.entity';
 import { Subscription, SubscriptionStatus } from './subscription.entity';
 import { Invoice, PaymentStatus, PaymentMethod } from './invoice.entity';
 import { Beneficiary } from '@modules/beneficiaries/beneficiary.entity';
+import { User, UserRole } from '@modules/users/user.entity';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import { NotificationType } from '@modules/notifications/notification.entity';
 import {
   CreatePackageDto,
   UpdatePackageDto,
@@ -22,6 +26,8 @@ import {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @InjectRepository(ServicePackage)
     private packageRepo: Repository<ServicePackage>,
@@ -34,6 +40,11 @@ export class PaymentsService {
 
     @InjectRepository(Beneficiary)
     private beneficiaryRepo: Repository<Beneficiary>,
+
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ═══════════════════════════════════════════
@@ -215,6 +226,14 @@ export class PaymentsService {
     });
 
     const saved = await this.invoiceRepo.save(invoice);
+
+    await this.notifyAccountants(tenantId, createdById, {
+      type: NotificationType.PAYMENT_DUE,
+      title: 'فاتورة جديدة',
+      message: `تم إصدار فاتورة رقم ${invoiceNumber} للمستفيد رقم ${beneficiary.fileNumber}.`,
+      link: `/dashboard/payments/invoices/${saved.id}`,
+    });
+
     return this.findInvoice(saved.id, tenantId);
   }
 
@@ -259,7 +278,12 @@ export class PaymentsService {
     return invoice;
   }
 
-  async markAsPaid(id: string, dto: MarkPaidDto, tenantId: string): Promise<Invoice> {
+  async markAsPaid(
+    id: string,
+    dto: MarkPaidDto,
+    tenantId: string,
+    actorId?: string,
+  ): Promise<Invoice> {
     const invoice = await this.findInvoice(id, tenantId);
     if (invoice.paymentStatus === PaymentStatus.PAID) {
       throw new BadRequestException('الفاتورة مدفوعة مسبقاً');
@@ -270,16 +294,32 @@ export class PaymentsService {
     if (dto.notes) invoice.notes = dto.notes;
 
     await this.invoiceRepo.save(invoice);
+
+    await this.notifyAccountants(tenantId, actorId, {
+      type: NotificationType.PAYMENT_DUE,
+      title: 'تم تسجيل دفعة',
+      message: `تم تسجيل دفع الفاتورة رقم ${invoice.invoiceNumber} للمستفيد رقم ${invoice.beneficiary?.fileNumber ?? ''}.`,
+      link: `/dashboard/payments/invoices/${invoice.id}`,
+    });
+
     return this.findInvoice(id, tenantId);
   }
 
-  async refund(id: string, tenantId: string): Promise<Invoice> {
+  async refund(id: string, tenantId: string, actorId?: string): Promise<Invoice> {
     const invoice = await this.findInvoice(id, tenantId);
     if (invoice.paymentStatus !== PaymentStatus.PAID) {
       throw new BadRequestException('يمكن استرداد الفواتير المدفوعة فقط');
     }
     invoice.paymentStatus = PaymentStatus.REFUNDED;
     await this.invoiceRepo.save(invoice);
+
+    await this.notifyAccountants(tenantId, actorId, {
+      type: NotificationType.PAYMENT_DUE,
+      title: 'تم استرداد فاتورة',
+      message: `تم استرداد الفاتورة رقم ${invoice.invoiceNumber} للمستفيد رقم ${invoice.beneficiary?.fileNumber ?? ''}.`,
+      link: `/dashboard/payments/invoices/${invoice.id}`,
+    });
+
     return this.findInvoice(id, tenantId);
   }
 
@@ -327,6 +367,28 @@ export class PaymentsService {
   // ═══════════════════════════════════════════
   // PRIVATE HELPERS
   // ═══════════════════════════════════════════
+
+  /** إشعار محاسبي المركز (باستثناء من قام بالعملية) دون التأثير على العملية الأساسية */
+  private async notifyAccountants(
+    tenantId: string,
+    actorId: string | undefined,
+    dto: { type: NotificationType; title: string; message: string; link?: string },
+  ): Promise<void> {
+    try {
+      const accountants = await this.userRepo.find({
+        where: { tenantId, role: UserRole.ACCOUNTANT },
+        select: { id: true },
+      });
+      const recipients = (accountants ?? [])
+        .map((u) => u.id)
+        .filter((id) => id !== actorId);
+      await this.notificationsService.broadcastSafe(recipients, { tenantId, ...dto });
+    } catch (error) {
+      this.logger.warn(
+        `تعذّر إرسال إشعار المدفوعات: ${(error as Error)?.message ?? error}`,
+      );
+    }
+  }
 
   private async generateInvoiceNumber(tenantId: string): Promise<string> {
     const year = new Date().getFullYear();

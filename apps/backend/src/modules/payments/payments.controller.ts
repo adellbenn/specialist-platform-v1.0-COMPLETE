@@ -187,16 +187,25 @@ export class PaymentsController {
   @WriterAndAccountant()
   @RequirePermissions(Permission.PAYMENT_UPDATE)
   @ApiOperation({ summary: 'تسجيل الدفع' })
-  async markPaid(@Param('id') id: string, @Body() dto: MarkPaidDto, @TenantId() tenantId: string) {
-    const result = await this.service.markAsPaid(id, dto, tenantId);
+  async markPaid(
+    @Param('id') id: string,
+    @Body() dto: MarkPaidDto,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.markAsPaid(id, dto, tenantId, user.id);
     return { data: result, message: 'تم تسجيل الدفع بنجاح' };
   }
 
   @Patch('invoices/:id/refund')
   @RequirePermissions(Permission.PAYMENT_UPDATE)
   @ApiOperation({ summary: 'استرداد فاتورة' })
-  async refund(@Param('id') id: string, @TenantId() tenantId: string) {
-    const result = await this.service.refund(id, tenantId);
+  async refund(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.service.refund(id, tenantId, user.id);
     return { data: result, message: 'تم استرداد المبلغ' };
   }
 }
