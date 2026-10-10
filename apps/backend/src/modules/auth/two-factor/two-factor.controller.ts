@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { TwoFactorService } from './two-factor.service';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
-import { CurrentUser, Public } from '@common/decorators';
+import { CurrentUser, Public, AllowWhenMustChangePassword } from '@common/decorators';
 import { User } from '@modules/users/user.entity';
 import {
   EnableTwoFactorDto,
@@ -16,6 +16,7 @@ export class TwoFactorController {
   constructor(private readonly twoFactorService: TwoFactorService) {}
 
   @Post('generate')
+  @AllowWhenMustChangePassword()
   @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -26,6 +27,7 @@ export class TwoFactorController {
   }
 
   @Post('verify')
+  @AllowWhenMustChangePassword()
   @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -37,6 +39,7 @@ export class TwoFactorController {
   }
 
   @Post('disable')
+  @AllowWhenMustChangePassword()
   @Throttle({ strict: {} })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -48,6 +51,7 @@ export class TwoFactorController {
   }
 
   @Get('status')
+  @AllowWhenMustChangePassword()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get 2FA status' })

@@ -21,7 +21,16 @@ import { ROLES_KEY, PERMISSIONS_KEY, PERMISSIONS_ANY_KEY, SKIP_RBAC_KEY } from '
 
 // Re-export metadata keys and simple decorators so
 // `import { Public, IS_PUBLIC_KEY } from '@common/decorators'` still works
-export { IS_PUBLIC_KEY, ROLES_KEY, PERMISSIONS_KEY, PERMISSIONS_ANY_KEY, SKIP_RBAC_KEY, Public } from './keys';
+export {
+  IS_PUBLIC_KEY,
+  ROLES_KEY,
+  PERMISSIONS_KEY,
+  PERMISSIONS_ANY_KEY,
+  SKIP_RBAC_KEY,
+  ALLOW_MUST_CHANGE_PASSWORD_KEY,
+  Public,
+  AllowWhenMustChangePassword,
+} from './keys';
 
 // ═══════════════════════════════════════════════════════════════
 // BASIC DECORATORS

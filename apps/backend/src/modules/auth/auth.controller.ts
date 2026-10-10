@@ -26,7 +26,7 @@ import { TwoFactorLoginDto } from './dto/two-factor.dto';
 import { UpdateThemeDto } from './dto/update-theme.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
-import { Public, CurrentUser, SkipRbac } from '@common/decorators';
+import { Public, CurrentUser, SkipRbac, AllowWhenMustChangePassword } from '@common/decorators';
 import { User } from '@modules/users/user.entity';
 
 @ApiTags('المصادقة')
@@ -88,6 +88,7 @@ export class AuthController {
   }
 
   @Public()
+  @AllowWhenMustChangePassword()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'تجديد رمز الوصول' })
@@ -98,6 +99,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @AllowWhenMustChangePassword()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'بيانات المستخدم الحالي' })
@@ -146,6 +148,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @AllowWhenMustChangePassword()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -168,6 +171,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @AllowWhenMustChangePassword()
   @Throttle({ strict: {} })
   @Patch('change-password')
   @HttpCode(HttpStatus.OK)

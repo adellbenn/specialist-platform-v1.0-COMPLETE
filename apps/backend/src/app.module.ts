@@ -51,6 +51,7 @@ import { PermissionGroup } from '@modules/permissions/permission-group.entity';
 import { UserPermission } from '@modules/permissions/user-permission.entity';
 
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { MustChangePasswordGuard } from '@common/guards/must-change-password.guard';
 import { GlobalExceptionFilter } from '@common/filters/global-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
 import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.interceptor';
@@ -190,6 +191,7 @@ import { CorrelationIdInterceptor } from '@common/interceptors/correlation-id.in
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: MustChangePasswordGuard },
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: CorrelationIdInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
