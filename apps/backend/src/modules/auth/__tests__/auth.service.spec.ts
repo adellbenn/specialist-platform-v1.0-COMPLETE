@@ -719,6 +719,36 @@ describe('AuthService', () => {
 
       expect(result.resetLink).toBeUndefined();
     });
+
+    it('should not log the reset link or token to the console', async () => {
+      const user = mockUser();
+      userRepo.findOne.mockResolvedValue(user);
+      resetTokenRepo.update.mockResolvedValue(undefined);
+      resetTokenRepo.save.mockResolvedValue(undefined);
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+
+      const result = await service.forgotPassword({ email: user.email });
+
+      const renderedCalls = [
+        ...logSpy.mock.calls,
+        ...warnSpy.mock.calls,
+        ...errorSpy.mock.calls,
+        ...infoSpy.mock.calls,
+      ].map((args) => args.join(' '));
+
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(
+        renderedCalls.some(
+          (line) => line.includes('reset-password') || line.includes('token='),
+        ),
+      ).toBe(false);
+      // resetLink is still returned in dev (app.nodeEnv defaults to development)
+      expect(result.resetLink).toBeDefined();
+    });
   });
 
   describe('resetPassword', () => {

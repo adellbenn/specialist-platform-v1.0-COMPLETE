@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, ConflictException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { UsersService } from '../users.service';
 import { User, UserRole } from '../user.entity';
 import { Role } from '@modules/permissions/role.entity';
@@ -82,6 +82,27 @@ describe('UsersService', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('onModuleInit (seed)', () => {
+    const seedEnvKeys = ['SUPER_ADMIN_EMAIL', 'SUPER_ADMIN_PASSWORD', 'NODE_ENV'] as const;
+    let envSnapshot: Record<string, string | undefined>;
+
+    beforeEach(() => {
+      envSnapshot = {};
+      for (const key of seedEnvKeys) envSnapshot[key] = process.env[key];
+
+      userRepo.count.mockResolvedValue(0);
+      permissionsService.seedPermissions.mockResolvedValue(undefined);
+      permissionsService.seedRolesFromMap.mockResolvedValue([
+        { id: 'role-1', name: 'super_admin' },
+      ]);
+    });
+
+    afterEach(() => {
+      for (const key of seedEnvKeys) {
+        if (envSnapshot[key] === undefined) delete process.env[key];
+        else process.env[key] = envSnapshot[key];
+      }
+    });
+
     it('should skip seeding if users already exist', async () => {
       userRepo.count.mockResolvedValue(5);
 
@@ -90,67 +111,74 @@ describe('UsersService', () => {
       expect(permissionsService.seedPermissions).not.toHaveBeenCalled();
     });
 
-    it('should seed admin user if no users exist (dev mode)', async () => {
-      userRepo.count.mockResolvedValue(0);
-      permissionsService.seedPermissions.mockResolvedValue(undefined);
-      permissionsService.seedRolesFromMap.mockResolvedValue([
-        { id: 'role-1', name: 'super_admin' },
-      ]);
-      userRepo.save.mockResolvedValue({});
-
-      const originalEnv = process.env.NODE_ENV;
-      const originalEmail = process.env.SUPER_ADMIN_EMAIL;
-      const originalPassword = process.env.SUPER_ADMIN_PASSWORD;
-      process.env.NODE_ENV = 'development';
+    it('should not create a user and warn naming SUPER_ADMIN_EMAIL when it is missing', async () => {
       delete process.env.SUPER_ADMIN_EMAIL;
+      process.env.SUPER_ADMIN_PASSWORD = 'some-password';
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+
+      expect(userRepo.save).not.toHaveBeenCalled();
+      expect(User.hashPassword).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('SUPER_ADMIN_EMAIL'));
+    });
+
+    it('should not create a user and warn naming SUPER_ADMIN_PASSWORD when it is missing', async () => {
+      process.env.SUPER_ADMIN_EMAIL = 'admin@example.com';
       delete process.env.SUPER_ADMIN_PASSWORD;
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+
+      expect(userRepo.save).not.toHaveBeenCalled();
+      expect(User.hashPassword).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('SUPER_ADMIN_PASSWORD'));
+    });
+
+    it('should create the super admin with the configured email, hashed password and roleId', async () => {
+      process.env.SUPER_ADMIN_EMAIL = 'admin@example.com';
+      process.env.SUPER_ADMIN_PASSWORD = 'plain-secret-password';
+      userRepo.create.mockImplementation((data: any) => data);
+      userRepo.save.mockImplementation((data: any) => data);
 
       await service.onModuleInit();
 
-      expect(permissionsService.seedPermissions).toHaveBeenCalled();
-      expect(permissionsService.seedRolesFromMap).toHaveBeenCalledWith(undefined);
-      expect(userRepo.save).toHaveBeenCalled();
-      expect(User.hashPassword).toHaveBeenCalled();
-
-      process.env.NODE_ENV = originalEnv;
-      if (originalEmail) process.env.SUPER_ADMIN_EMAIL = originalEmail;
-      if (originalPassword) process.env.SUPER_ADMIN_PASSWORD = originalPassword;
+      expect(User.hashPassword).toHaveBeenCalledWith('plain-secret-password');
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'admin@example.com',
+          passwordHash: '$2b$12$newhash',
+          role: UserRole.SUPER_ADMIN,
+          roleId: 'role-1',
+        }),
+      );
     });
 
-    it('should throw in production if SUPER_ADMIN_PASSWORD not set', async () => {
-      userRepo.count.mockResolvedValue(0);
-      permissionsService.seedPermissions.mockResolvedValue(undefined);
-      permissionsService.seedRolesFromMap.mockResolvedValue([]);
+    it('should never pass the generated/plain password to any logger or console call', async () => {
+      const plain = 'super-sensitive-plain-pw';
+      process.env.SUPER_ADMIN_EMAIL = 'admin@example.com';
+      process.env.SUPER_ADMIN_PASSWORD = plain;
 
-      const originalEnv = process.env.NODE_ENV;
-      const originalPassword = process.env.SUPER_ADMIN_PASSWORD;
-      process.env.NODE_ENV = 'production';
-      delete process.env.SUPER_ADMIN_PASSWORD;
-
-      await expect(service.onModuleInit()).rejects.toThrow('SUPER_ADMIN_PASSWORD must be set');
-
-      process.env.NODE_ENV = originalEnv;
-      if (originalPassword) process.env.SUPER_ADMIN_PASSWORD = originalPassword;
-    });
-
-    it('should use provided SUPER_ADMIN_PASSWORD in dev', async () => {
-      userRepo.count.mockResolvedValue(0);
-      permissionsService.seedPermissions.mockResolvedValue(undefined);
-      permissionsService.seedRolesFromMap.mockResolvedValue([]);
-      userRepo.save.mockResolvedValue({});
-
-      const originalEnv = process.env.NODE_ENV;
-      const originalPassword = process.env.SUPER_ADMIN_PASSWORD;
-      process.env.NODE_ENV = 'development';
-      process.env.SUPER_ADMIN_PASSWORD = 'provided-password';
+      const spies = [
+        jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined),
+        jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined),
+        jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined),
+        jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined),
+        jest.spyOn(Logger.prototype, 'verbose').mockImplementation(() => undefined),
+        jest.spyOn(console, 'log').mockImplementation(() => undefined),
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined),
+        jest.spyOn(console, 'error').mockImplementation(() => undefined),
+        jest.spyOn(console, 'info').mockImplementation(() => undefined),
+        jest.spyOn(console, 'debug').mockImplementation(() => undefined),
+      ];
 
       await service.onModuleInit();
 
-      expect(User.hashPassword).toHaveBeenCalledWith('provided-password');
+      const renderedCalls = spies
+        .flatMap((spy) => spy.mock.calls)
+        .map((args) => JSON.stringify(args));
 
-      process.env.NODE_ENV = originalEnv;
-      if (originalPassword) process.env.SUPER_ADMIN_PASSWORD = originalPassword;
-      else delete process.env.SUPER_ADMIN_PASSWORD;
+      expect(renderedCalls.some((line) => line.includes(plain))).toBe(false);
     });
   });
 
