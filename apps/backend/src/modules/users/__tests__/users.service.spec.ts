@@ -52,6 +52,7 @@ describe('UsersService', () => {
       create: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      manager: { findOne: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
     };
 
     roleRepo = {
@@ -250,6 +251,59 @@ describe('UsersService', () => {
 
       expect(userRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ tenantId: 'tenant-2' }),
+      );
+    });
+
+    it('should reject creating a non-super user without a tenant', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.SPECIALIST },
+          UserRole.CENTER_MANAGER,
+          undefined as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject super_admin creating a non-super user without a tenant', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.SPECIALIST },
+          UserRole.SUPER_ADMIN,
+          null as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject creating a user when the tenant does not exist', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      userRepo.manager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.SPECIALIST },
+          UserRole.CENTER_MANAGER,
+          'missing-tenant',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should force the creator tenant for non-super creators and ignore body tenantId', async () => {
+      userRepo.findOne.mockResolvedValue(null);
+      userRepo.create.mockImplementation((data: any) => data);
+      userRepo.save.mockResolvedValue(mockUser());
+
+      await service.create(
+        { email: 'a@b.com', password: 'pass', firstName: 'A', lastName: 'B', role: UserRole.SPECIALIST, tenantId: 'other-tenant' },
+        UserRole.CENTER_MANAGER,
+        'tenant-1',
+      );
+
+      expect(userRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: 'tenant-1' }),
       );
     });
 
@@ -533,6 +587,49 @@ describe('UsersService', () => {
       await service.update('user-1', { role: UserRole.CENTER_MANAGER }, 'tenant-1', caller as any);
 
       expect(user.role).toBe(UserRole.CENTER_MANAGER);
+    });
+
+    it('should reject updating a non-super user to have no tenant', async () => {
+      const user = mockUser({ tenantId: null });
+      userRepo.findOne.mockResolvedValue(user);
+      const caller = mockUser({ id: 'root-1', role: UserRole.SUPER_ADMIN, tenantId: null });
+
+      await expect(
+        service.update('user-1', { firstName: 'X' }, undefined, caller as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject assigning a non-existent tenant', async () => {
+      const user = mockUser({ tenantId: null });
+      userRepo.findOne.mockResolvedValue(user);
+      userRepo.manager.findOne.mockResolvedValue(null);
+      const caller = mockUser({ id: 'root-1', role: UserRole.SUPER_ADMIN, tenantId: null });
+
+      await expect(
+        service.update('user-1', { tenantId: 'missing' }, undefined, caller as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow super_admin to assign a valid tenant', async () => {
+      const user = mockUser({ tenantId: null, role: UserRole.SPECIALIST });
+      userRepo.findOne.mockResolvedValue(user);
+      userRepo.save.mockResolvedValue(user);
+      const caller = mockUser({ id: 'root-1', role: UserRole.SUPER_ADMIN, tenantId: null });
+
+      await service.update('user-1', { tenantId: 'tenant-9' }, undefined, caller as any);
+
+      expect(user.tenantId).toBe('tenant-9');
+    });
+
+    it('should force the acting non-super tenant and ignore body tenantId', async () => {
+      const user = mockUser({ tenantId: 'tenant-1' });
+      userRepo.findOne.mockResolvedValue(user);
+      userRepo.save.mockResolvedValue(user);
+      const caller = mockUser({ id: 'mgr-1', role: UserRole.CENTER_MANAGER, tenantId: 'tenant-1' });
+
+      await service.update('user-1', { tenantId: 'other-tenant' }, 'tenant-1', caller as any);
+
+      expect(user.tenantId).toBe('tenant-1');
     });
   });
 

@@ -10,6 +10,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindManyOptions } from 'typeorm';
 import { User, UserRole } from './user.entity';
+import { Tenant } from '@modules/tenants/tenant.entity';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto/user.dto';
 import { PermissionsService } from '@modules/permissions/permissions.service';
 import { Role } from '@modules/permissions/role.entity';
@@ -90,8 +91,12 @@ export class UsersService implements OnModuleInit {
     // لا يمكن لأحد إنشاء دور أعلى من دوره
     this.assertCanAssignRole(creatorRole, dto.role);
 
-    // تعيين tenant تلقائياً إذا لم يكن المنشئ super_admin
-    const tenantId = creatorRole === UserRole.SUPER_ADMIN ? dto.tenantId : creatorTenantId;
+    // تعيين المركز: super_admin يختار، وغيره يُفرض عليه مركزه (تجاهل ما في الطلب)
+    const effectiveTenantId =
+      creatorRole === UserRole.SUPER_ADMIN ? dto.tenantId : creatorTenantId;
+
+    // أي دور غير super_admin يجب أن يرتبط بمركز موجود
+    await this.assertTenantForRole(dto.role, effectiveTenantId);
 
     // تعيين roleId تلقائياً حسب الدور
     let roleId = dto.roleId;
@@ -109,7 +114,7 @@ export class UsersService implements OnModuleInit {
     const user = this.userRepository.create({
       ...dto,
       passwordHash: await User.hashPassword(dto.password),
-      tenantId,
+      tenantId: effectiveTenantId,
       roleId,
     });
 
@@ -171,6 +176,18 @@ export class UsersService implements OnModuleInit {
     if (requestingUser) this.assertCanManageUser(requestingUser, user);
     this.assertNotPrimaryTarget(user, 'تعديل الحساب الرئيسي غير مسموح');
 
+    // تحديد المركز النهائي: super_admin وحده يختار، وغيره يُقيَّد بمركزه
+    const effectiveRole = dto.role ?? user.role;
+    let effectiveTenantId = user.tenantId;
+    if (requestingUser) {
+      if (requestingUser.role === UserRole.SUPER_ADMIN) {
+        if (dto.tenantId !== undefined) effectiveTenantId = dto.tenantId;
+      } else {
+        effectiveTenantId = requestingUser.tenantId;
+      }
+    }
+    await this.assertTenantForRole(effectiveRole, effectiveTenantId);
+
     const newRole = dto.role;
     const roleChanged = newRole != null && newRole !== user.role;
     const passwordChanged = !!dto.password;
@@ -199,6 +216,7 @@ export class UsersService implements OnModuleInit {
       ...(dto.lastName && { lastName: dto.lastName }),
       ...(dto.email && { email: dto.email }),
       ...(dto.phone && { phone: dto.phone }),
+      tenantId: effectiveTenantId,
     });
 
     const saved = await this.userRepository.save(user);
@@ -267,6 +285,22 @@ export class UsersService implements OnModuleInit {
   }
 
   // ─── ROLE HIERARCHY HELPERS ─────────────────────────────────
+
+  /**
+   * يضمن أن كل دور غير super_admin مرتبط بمركز موجود فعلًا.
+   */
+  private async assertTenantForRole(role: UserRole, tenantId?: string | null): Promise<void> {
+    if (role === UserRole.SUPER_ADMIN) return;
+
+    if (!tenantId) {
+      throw new BadRequestException('يجب تحديد المركز للمستخدمين غير المدير العام');
+    }
+
+    const tenant = await this.userRepository.manager.findOne(Tenant, {
+      where: { id: tenantId },
+    });
+    if (!tenant) throw new BadRequestException('المركز غير موجود');
+  }
 
   /**
    * هل يمكن للمستدعي تعيين الدور المطلوب؟
