@@ -40,6 +40,22 @@ function revokePermissionAuthority(): void {
   }
 }
 
+/* ─── كشف إلزام تغيير كلمة المرور ───
+   يستجيب الخادم بـ 403 وبالرمز `MUST_CHANGE_PASSWORD` عندما يتعيّن على المستخدم
+   تغيير كلمة مروره قبل استخدام بقية المنصة. نكتشفه من `code` أو من `message`
+   (نصًّا أو مصفوفة) ثم نضبط علم المتجر ونعيد التوجيه إلى صفحة التغيير. */
+const MUST_CHANGE_PASSWORD = 'MUST_CHANGE_PASSWORD';
+
+function isMustChangePasswordError(error: AxiosError): boolean {
+  const data = error.response?.data as { code?: unknown; message?: unknown } | undefined;
+  if (!data || typeof data !== 'object') return false;
+  if (data.code === MUST_CHANGE_PASSWORD) return true;
+  const { message } = data;
+  if (typeof message === 'string') return message === MUST_CHANGE_PASSWORD;
+  if (Array.isArray(message)) return message.includes(MUST_CHANGE_PASSWORD);
+  return false;
+}
+
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: Function; reject: Function }> = [];
 
@@ -109,6 +125,19 @@ apiClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (error.response?.status === 403 && isMustChangePasswordError(error)) {
+      try {
+        const { useAuthStore } = await import('@/store/auth.store');
+        useAuthStore.setState({ mustChangePassword: true });
+      } catch {
+        /* لا نُفشل إعادة التوجيه بسبب تعذّر ضبط العلم */
+      }
+      if (window.location.pathname !== '/auth/change-password') {
+        window.location.href = '/auth/change-password';
+      }
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

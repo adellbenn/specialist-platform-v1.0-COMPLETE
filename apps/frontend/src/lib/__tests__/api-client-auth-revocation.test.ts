@@ -46,12 +46,13 @@ const mockedCookies = Cookies as unknown as {
 };
 const getCookie = (v: string | undefined) => mockedCookies.get.mockReturnValue(v);
 const mockedAxiosPost = vi.mocked(axios.post);
-const rejectWith = (status: number): any => ({
-  response: { status },
+const rejectWith = (status: number, data?: unknown): any => ({
+  response: { status, data },
   config: { headers: {} },
 });
 
 let href: string;
+let pathname: string;
 beforeEach(() => {
   interceptors.response.length = 0;
   vi.resetModules();
@@ -59,8 +60,13 @@ beforeEach(() => {
   mockedCookies.remove.mockReset();
   mockedAxiosPost.mockReset();
   href = '/dashboard';
+  pathname = '/dashboard';
   Object.defineProperty(window, 'location', {
-    value: { get href() { return href; }, set href(v: string) { href = v; } },
+    value: {
+      get href() { return href; },
+      set href(v: string) { href = v; },
+      get pathname() { return pathname; },
+    },
     writable: true, configurable: true,
   });
 });
@@ -171,6 +177,77 @@ describe('api-client: إبطال السلطة عند فشل المصادقة', (
     await Promise.resolve(interceptor(rejectWith(401))).catch(() => {});
 
     expect(order.indexOf('revoke')).toBeLessThan(order.indexOf('remove'));
+  });
+});
+
+describe('api-client: إلزام تغيير كلمة المرور (403)', () => {
+  const loadAuthStore = () => import('@/store/auth.store');
+
+  it('403 MUST_CHANGE_PASSWORD في message يضبط العلم ويعيد التوجيه', async () => {
+    const { interceptor } = await loadWithHandler();
+    const { useAuthStore } = await loadAuthStore();
+    useAuthStore.setState({ mustChangePassword: false });
+
+    await expect(
+      interceptor(rejectWith(403, { message: 'MUST_CHANGE_PASSWORD' })),
+    ).rejects.toBeDefined();
+
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
+    expect(href).toBe('/auth/change-password');
+  });
+
+  it('403 MUST_CHANGE_PASSWORD في code يضبط العلم ويعيد التوجيه', async () => {
+    const { interceptor } = await loadWithHandler();
+    const { useAuthStore } = await loadAuthStore();
+    useAuthStore.setState({ mustChangePassword: false });
+
+    await expect(
+      interceptor(rejectWith(403, { code: 'MUST_CHANGE_PASSWORD' })),
+    ).rejects.toBeDefined();
+
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
+    expect(href).toBe('/auth/change-password');
+  });
+
+  it('403 MUST_CHANGE_PASSWORD في مصفوفة message يُكتشف', async () => {
+    const { interceptor } = await loadWithHandler();
+    const { useAuthStore } = await loadAuthStore();
+    useAuthStore.setState({ mustChangePassword: false });
+
+    await expect(
+      interceptor(rejectWith(403, { message: ['MUST_CHANGE_PASSWORD'] })),
+    ).rejects.toBeDefined();
+
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
+    expect(href).toBe('/auth/change-password');
+  });
+
+  it('لا يعيد التوجيه إذا كان على صفحة تغيير كلمة المرور', async () => {
+    const { interceptor } = await loadWithHandler();
+    const { useAuthStore } = await loadAuthStore();
+    useAuthStore.setState({ mustChangePassword: false });
+    pathname = '/auth/change-password';
+
+    await expect(
+      interceptor(rejectWith(403, { message: 'MUST_CHANGE_PASSWORD' })),
+    ).rejects.toBeDefined();
+
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
+    expect(href).toBe('/dashboard');
+  });
+
+  it('403 برسالة أخرى لا يضبط العلم ولا يعيد التوجيه ويُرْفَض كما قبل', async () => {
+    const { onAuthFailure, interceptor } = await loadWithHandler();
+    const { useAuthStore } = await loadAuthStore();
+    useAuthStore.setState({ mustChangePassword: false });
+
+    await expect(
+      interceptor(rejectWith(403, { message: 'FORBIDDEN' })),
+    ).rejects.toBeDefined();
+
+    expect(useAuthStore.getState().mustChangePassword).toBe(false);
+    expect(href).toBe('/dashboard');
+    expect(onAuthFailure).not.toHaveBeenCalled();
   });
 });
 
