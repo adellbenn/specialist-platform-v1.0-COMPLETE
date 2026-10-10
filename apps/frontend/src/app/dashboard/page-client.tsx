@@ -11,7 +11,7 @@ import { useDashboardStats, useTodayAppointments } from '@/hooks/queries/use-das
 import { Card, SectionHeader } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import { ROLE_LABELS, UserRole } from '@/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
 import { CASE_TYPE_LABELS } from '@/types';
@@ -189,9 +189,7 @@ export default function DashboardPageClient() {
                     <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface transition-colors cursor-pointer">
                       <div className="text-center flex-shrink-0 w-14">
                         <p className="text-small font-semibold text-text-primary">
-                          {new Date(appt.scheduledAt).toLocaleTimeString('ar', {
-                            hour: '2-digit', minute: '2-digit',
-                          })}
+                          {formatTime(appt.scheduledAt)}
                         </p>
                         <p className="text-xs text-text-muted">{appt.durationMinutes}د</p>
                       </div>

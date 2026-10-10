@@ -5,20 +5,43 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const arFormatter = new Intl.DateTimeFormat('ar-SA', {
+/** اللغة/المنطقة الموحّدة للتطبيق — تُنتج أرقامًا لاتينية */
+export const APP_LOCALE = 'ar-DZ';
+
+/** العملة الافتراضية الموحّدة للتطبيق */
+export const APP_CURRENCY = 'DZD';
+
+const CURRENCY_SYMBOLS: Record<string, string> = { DZD: 'دج' };
+
+const dateFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
   day: '2-digit', month: '2-digit', year: 'numeric',
 });
-const arDateTimeFormatter = new Intl.DateTimeFormat('ar-SA', {
+const dateTimeFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
   day: '2-digit', month: '2-digit', year: 'numeric',
   hour: '2-digit', minute: '2-digit', hour12: true,
 });
 
+/** تنسيق رقم بالأرقام اللاتينية وفق لغة التطبيق */
+export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
+  return new Intl.NumberFormat(APP_LOCALE, options).format(value);
+}
+
 export function formatDate(date: string | Date): string {
-  return arFormatter.format(new Date(date));
+  return dateFormatter.format(new Date(date));
 }
 
 export function formatDateTime(date: string | Date): string {
-  return arDateTimeFormatter.format(new Date(date));
+  return dateTimeFormatter.format(new Date(date));
+}
+
+/** تنسيق تاريخ بخيارات مخصّصة وفق لغة التطبيق */
+export function formatDateCustom(date: string | Date, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, options).format(new Date(date));
+}
+
+/** تنسيق وقت بخيارات مخصّصة (افتراضيًا ساعة:دقيقة) وفق لغة التطبيق */
+export function formatTime(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, { hour: '2-digit', minute: '2-digit', ...options }).format(new Date(date));
 }
 
 export function timeAgo(date: string | Date): string {
@@ -31,20 +54,17 @@ export function timeAgo(date: string | Date): string {
   const years = Math.floor(days / 365);
 
   if (seconds < 60) return 'منذ لحظات';
-  if (minutes < 60) return `منذ ${minutes} دقيقة`;
-  if (hours < 24) return `منذ ${hours} ساعة`;
-  if (days < 30) return `منذ ${days} يوم`;
-  if (months < 12) return `منذ ${months} شهر`;
-  return `منذ ${years} سنة`;
+  if (minutes < 60) return `منذ ${formatNumber(minutes)} دقيقة`;
+  if (hours < 24) return `منذ ${formatNumber(hours)} ساعة`;
+  if (days < 30) return `منذ ${formatNumber(days)} يوم`;
+  if (months < 12) return `منذ ${formatNumber(months)} شهر`;
+  return `منذ ${formatNumber(years)} سنة`;
 }
 
-/** تنسيق المبلغ المالي */
-export function formatCurrency(amount: number, currency = 'SAR'): string {
-  return new Intl.NumberFormat('ar-SA', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-  }).format(amount);
+/** تنسيق المبلغ المالي (العملة الافتراضية DZD) */
+export function formatCurrency(amount: number, currency: string = APP_CURRENCY): string {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
+  return `${formatNumber(amount, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${symbol}`;
 }
 
 /** اختصار النص الطويل */

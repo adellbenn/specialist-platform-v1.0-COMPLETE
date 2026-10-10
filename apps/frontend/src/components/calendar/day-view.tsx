@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Appointment, CALENDAR_DEFAULT_COLORS } from '@/types';
-import { cn, toDateKey, isoToDateKey } from '@/lib/utils';
+import { cn, toDateKey, isoToDateKey, formatDateCustom, formatTime } from '@/lib/utils';
 
 interface DayViewProps {
   currentDate: Date;
@@ -29,7 +29,7 @@ export function DayView({ currentDate, appointments, onAppointmentClick }: DayVi
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
       <div className={cn('p-3 text-center text-sm font-bold', isToday && 'rounded-lg')}
         style={{ backgroundColor: isToday ? 'var(--primary-50)' : 'transparent', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}>
-        {currentDate.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        {formatDateCustom(currentDate, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       </div>
       <div className="overflow-y-auto max-h-[700px]">
         {HOURS.map((hour) => {
@@ -46,7 +46,7 @@ export function DayView({ currentDate, appointments, onAppointmentClick }: DayVi
                 )}
                 {appts.map((a) => {
                   const colors = CALENDAR_DEFAULT_COLORS.status[a.status];
-                  const time = new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+                  const time = formatTime(a.scheduledAt);
                   return (
                     <button type="button" key={a.id} onClick={() => onAppointmentClick(a)}
                       aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${time}`}

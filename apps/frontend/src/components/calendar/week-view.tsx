@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Appointment, CALENDAR_DEFAULT_COLORS } from '@/types';
-import { cn, toDateKey, isoToDateKey } from '@/lib/utils';
+import { cn, toDateKey, isoToDateKey, formatTime } from '@/lib/utils';
 
 interface WeekViewProps {
   currentDate: Date;
@@ -61,12 +61,12 @@ export function WeekView({ currentDate, appointments, onAppointmentClick }: Week
                     const height = Math.max(24, (duration / 60) * 56);
                     return (
                       <button type="button" key={a.id} onClick={() => onAppointmentClick(a)}
-                        aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}`}
+                        aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${formatTime(a.scheduledAt)}`}
                         className="w-full text-[10px] px-1 py-0.5 rounded cursor-pointer hover:opacity-80 truncate mb-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                         style={{ backgroundColor: colors.bg, color: colors.text, height: `${height}px` }}>
                         <span className="font-semibold">{a.beneficiary?.firstName}</span>
                         <br />
-                        {new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(a.scheduledAt)}
                       </button>
                     );
                   })}

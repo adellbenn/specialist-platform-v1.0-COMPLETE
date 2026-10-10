@@ -8,6 +8,7 @@ import {
 import { adminService } from '@/services/admin.service';
 import { PageSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
+import { formatDate } from '@/lib/utils';
 
 export default function SecurityCenterPage() {
   useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
@@ -103,7 +104,7 @@ export default function SecurityCenterPage() {
                   <Clock size={12} style={{ color: 'var(--text-muted)' }} />
                   <span style={{ color: 'var(--text-primary)' }}>{log.details || log.action}</span>
                   <span className="mr-auto" style={{ color: 'var(--text-muted)' }}>
-                    {log.createdAt ? new Date(log.createdAt).toLocaleDateString('ar-SA') : ''}
+                    {log.createdAt ? formatDate(log.createdAt) : ''}
                   </span>
                 </div>
               ))

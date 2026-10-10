@@ -3,7 +3,7 @@
 import { ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import { CalendarView } from '@/types';
 import { useCalendar } from './calendar-context';
-import { cn } from '@/lib/utils';
+import { cn, formatDateCustom } from '@/lib/utils';
 
 const VIEW_OPTIONS: Array<{ value: CalendarView; label: string }> = [
   { value: 'month', label: 'شهري' },
@@ -16,14 +16,14 @@ export function CalendarToolbar() {
   const { view, setView, goNext, goPrev, goToday, currentDate, openNewAppointment } = useCalendar();
 
   const titleText = (() => {
-    if (view === 'month') return currentDate.toLocaleDateString('ar', { year: 'numeric', month: 'long' });
+    if (view === 'month') return formatDateCustom(currentDate, { year: 'numeric', month: 'long' });
     if (view === 'week') {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - currentDate.getDay());
       const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-      return `${start.toLocaleDateString('ar', { day: 'numeric', month: 'short' })} — ${end.toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      return `${formatDateCustom(start, { day: 'numeric', month: 'short' })} — ${formatDateCustom(end, { day: 'numeric', month: 'short', year: 'numeric' })}`;
     }
-    if (view === 'day') return currentDate.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    return currentDate.toLocaleDateString('ar', { year: 'numeric', month: 'long' });
+    if (view === 'day') return formatDateCustom(currentDate, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return formatDateCustom(currentDate, { year: 'numeric', month: 'long' });
   })();
 
   return (

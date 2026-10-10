@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Appointment, CALENDAR_DEFAULT_COLORS } from '@/types';
-import { cn, toDateKey } from '@/lib/utils';
+import { cn, toDateKey, formatTime } from '@/lib/utils';
 
 interface MonthViewProps {
   currentDate: Date;
@@ -69,11 +69,11 @@ export function MonthView({ currentDate, byDay, onDayClick, onAppointmentClick }
                   return (
                     <button type="button" key={a.id}
                       onClick={(e) => { e.stopPropagation(); onAppointmentClick(a); }}
-                      aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}`}
+                      aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${formatTime(a.scheduledAt)}`}
                       className="w-full text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                       style={{ backgroundColor: colors.bg, color: colors.text }}>
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: colors.dot }} />
-                      {new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                      {formatTime(a.scheduledAt)}
                       {' '}{a.beneficiary?.firstName}
                     </button>
                   );

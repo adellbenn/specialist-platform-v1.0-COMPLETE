@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { formatDateCustom, formatTime } from '@/lib/utils';
 
 interface AppointmentModalProps {
   mode: 'view' | 'create' | 'edit';
@@ -249,8 +250,8 @@ export function AppointmentModal({ mode: initialMode, appointment, onClose, defa
 
 function ViewContent({ appointment }: { appointment: Appointment }) {
   const sColors = CALENDAR_DEFAULT_COLORS.status[appointment.status];
-  const time = new Date(appointment.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
-  const date = new Date(appointment.scheduledAt).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const time = formatTime(appointment.scheduledAt);
+  const date = formatDateCustom(appointment.scheduledAt, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
     <div className="space-y-4">

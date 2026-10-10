@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Appointment, CALENDAR_DEFAULT_COLORS, APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from '@/types';
-import { isoToDateKey } from '@/lib/utils';
+import { isoToDateKey, formatDateCustom, formatTime } from '@/lib/utils';
 
 interface AgendaViewProps {
   appointments: Appointment[];
@@ -21,10 +21,8 @@ export function AgendaView({ appointments, onAppointmentClick }: AgendaViewProps
     return g;
   }, [appointments]);
 
-  const formatDateAr = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  };
+  const formatDateAr = (dateStr: string) =>
+    formatDateCustom(dateStr + 'T00:00:00', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   if (Object.keys(grouped).length === 0) {
     return (
@@ -45,7 +43,7 @@ export function AgendaView({ appointments, onAppointmentClick }: AgendaViewProps
           {appts.map((a) => {
             const sColors = CALENDAR_DEFAULT_COLORS.status[a.status];
             const tColors = a.type ? CALENDAR_DEFAULT_COLORS.type[a.type] : null;
-            const time = new Date(a.scheduledAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+            const time = formatTime(a.scheduledAt);
             return (
               <button type="button" key={a.id} onClick={() => onAppointmentClick(a)}
                 aria-label={`${a.beneficiary?.firstName ?? ''} ${a.beneficiary?.lastName ?? ''} ${time}`}

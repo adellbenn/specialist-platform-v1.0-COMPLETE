@@ -9,7 +9,7 @@ import { adminService } from '@/services/admin.service';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
-import { cn } from '@/lib/utils';
+import { cn, formatDateTime } from '@/lib/utils';
 
 export default function AuditPage() {
   useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
@@ -141,7 +141,7 @@ export default function AuditPage() {
                 </p>
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                   <Clock size={10} />
-                  {new Date(log.createdAt).toLocaleString('ar-SA')}
+                  {formatDateTime(log.createdAt)}
                   {log.metadata && (
                     <>
                       <span>•</span>

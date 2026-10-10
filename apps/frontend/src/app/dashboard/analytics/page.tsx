@@ -5,9 +5,7 @@ import { TrendingUp, BarChart3, DollarSign, Users, MapPin, Play, ArrowUpRight, T
 import { analyticsService } from '@/services/analytics.service';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
-
-const formatCurrency = (n: number) =>
-  '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+import { formatCurrency } from '@/lib/utils';
 
 interface DashboardStats {
   beneficiaries: { active: number; total: number; newThisWeek: number; newThisMonth?: number };
