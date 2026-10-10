@@ -2,23 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  User, Shield, Globe, Paintbrush, Bell, Calendar, CreditCard, Puzzle, 
-  Users, FileText, Database, ChevronLeft,
-} from 'lucide-react';
+import { User, Paintbrush, ChevronLeft } from 'lucide-react';
 
 const SETTINGS_ITEMS = [
   { href: '/dashboard/settings',             label: 'الملف الشخصي',     icon: User,       exact: true },
-  { href: '/dashboard/settings/security',     label: 'الأمان',           icon: Shield      },
-  { href: '/dashboard/settings/language',     label: 'اللغة والمنطقة',   icon: Globe       },
   { href: '/dashboard/settings/appearance',   label: 'المظهر',           icon: Paintbrush  },
-  { href: '/dashboard/settings/notifications',label: 'الإشعارات',        icon: Bell        },
-  { href: '/dashboard/settings/calendar',     label: 'التقويم',          icon: Calendar    },
-  { href: '/dashboard/settings/billing',      label: 'الفواتير والاشتراك', icon: CreditCard },
-  { href: '/dashboard/settings/integrations', label: 'التكاملات',        icon: Puzzle      },
-  { href: '/dashboard/settings/team',         label: 'الفريق والصلاحيات', icon: Users       },
-  { href: '/dashboard/settings/audit',        label: 'سجل التدقيق',      icon: FileText    },
-  { href: '/dashboard/settings/data',         label: 'البيانات والنسخ الاحتياطي', icon: Database },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

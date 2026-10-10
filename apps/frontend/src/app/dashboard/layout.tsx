@@ -552,7 +552,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                   <div className="p-1.5">
                     <DropdownItem icon={User} label="الملف الشخصي" href="/dashboard/profile" onClick={() => setUserMenuOpen(false)} />
                     <DropdownItem icon={Settings} label="إعدادات الحساب" href="/dashboard/settings" onClick={() => setUserMenuOpen(false)} />
-                    <DropdownItem icon={Lock} label="تغيير كلمة المرور" onClick={() => { setUserMenuOpen(false); toast('قريباً...'); }} />
+                    <DropdownItem icon={Lock} label="تغيير كلمة المرور" href="/auth/change-password" onClick={() => setUserMenuOpen(false)} />
                   </div>
 
                   <div className="border-t" style={{ borderColor: 'var(--border)' }}>
