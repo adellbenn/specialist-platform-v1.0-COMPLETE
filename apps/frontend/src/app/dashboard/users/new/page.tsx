@@ -1,29 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus, ArrowLeft } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
 import { useRouteGuard } from '@/components/auth/route-guard';
-import { ROLE_LABELS } from '@/types';
+import { useAuthStore } from '@/store/auth.store';
+import { tenantsService } from '@/services/tenants.service';
+import { ROLE_LABELS, Tenant } from '@/types';
 import toast from 'react-hot-toast';
 
 const ROLES = ['super_admin', 'center_manager', 'supervisor', 'specialist', 'receptionist', 'accountant'] as const;
 
+const isTestTenant = (t: { name?: string; slug?: string }) =>
+  /zz[_-]?test/i.test(`${t.name ?? ''} ${t.slug ?? ''}`);
+
 export default function NewUserPage() {
   useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    password: '', role: 'specialist',
+    password: '', role: 'specialist', tenantId: '',
   });
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const showTenantSelect = isSuperAdmin && form.role !== 'super_admin';
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let active = true;
+    tenantsService
+      .getAll({ limit: 100 })
+      .then(({ data }) => { if (active) setTenants(data.data || []); })
+      .catch(() => { if (active) setTenants([]); });
+    return () => { active = false; };
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (!isSuperAdmin || form.tenantId) return;
+    const realTenants = tenants.filter((t) => !isTestTenant(t));
+    if (realTenants.length === 1) {
+      const onlyId = realTenants[0].id;
+      setForm((f) => (f.tenantId ? f : { ...f, tenantId: onlyId }));
+    }
+  }, [tenants, isSuperAdmin, form.tenantId]);
 
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.password) {
@@ -36,13 +65,29 @@ export default function NewUserPage() {
       return;
     }
     setPasswordError('');
+    if (showTenantSelect && !form.tenantId) {
+      toast.error('يجب تحديد المركز');
+      return;
+    }
     setSaving(true);
     try {
-      await apiClient.post('/users', form);
+      const payload: Record<string, unknown> = { ...form };
+      if (showTenantSelect) {
+        payload.tenantId = form.tenantId;
+      } else {
+        delete payload.tenantId;
+      }
+      await apiClient.post('/users', payload);
       toast.success('تم إنشاء المستخدم');
       router.push('/dashboard/users');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'فشل إنشاء المستخدم');
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 400) {
+        toast.error(message || 'يجب تحديد المركز');
+      } else {
+        toast.error(message || 'فشل إنشاء المستخدم');
+      }
     } finally {
       setSaving(false);
     }
@@ -121,8 +166,8 @@ export default function NewUserPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>الدور *</label>
-            <select value={form.role} onChange={(e) => update('role', e.target.value)}
+            <label htmlFor="role" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>الدور *</label>
+            <select id="role" value={form.role} onChange={(e) => update('role', e.target.value)}
               className="w-full text-base sm:text-sm max-sm:min-h-11 rounded-lg px-3 py-2"
               style={{ borderColor: 'var(--border)', outline: 'none' }}
               onFocus={(e) => { e.target.style.boxShadow = '0 0 0 2px var(--primary)'; e.target.style.borderColor = 'var(--primary)'; }}
@@ -132,6 +177,22 @@ export default function NewUserPage() {
               ))}
             </select>
           </div>
+
+          {showTenantSelect && (
+            <div>
+              <label htmlFor="tenant" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>المركز *</label>
+              <select id="tenant" value={form.tenantId} onChange={(e) => update('tenantId', e.target.value)}
+                className="w-full text-base sm:text-sm max-sm:min-h-11 rounded-lg px-3 py-2"
+                style={{ borderColor: 'var(--border)', outline: 'none' }}
+                onFocus={(e) => { e.target.style.boxShadow = '0 0 0 2px var(--primary)'; e.target.style.borderColor = 'var(--primary)'; }}
+                onBlur={(e) => { e.target.style.boxShadow = 'none'; e.target.style.borderColor = 'var(--border)'; }}>
+                <option value="">اختر المركز</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 justify-end pt-2">
             <button onClick={() => router.push('/dashboard/users')}
