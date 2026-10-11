@@ -42,11 +42,11 @@ export function CalendarToolbar() {
         <h2 className="text-base font-bold mr-2" style={{ color: 'var(--text-primary)' }}>{titleText}</h2>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex rounded-lg overflow-hidden flex-1 sm:flex-none" style={{ border: '1px solid var(--border)' }}>
           {VIEW_OPTIONS.map((opt) => (
             <button key={opt.value} onClick={() => setView(opt.value)}
-              className={cn('px-3 py-1.5 text-xs font-medium transition')}
+              className={cn('flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium transition whitespace-nowrap')}
               style={{
                 backgroundColor: view === opt.value ? 'var(--primary)' : 'var(--background)',
                 color: view === opt.value ? '#fff' : 'var(--text-primary)',
@@ -56,7 +56,7 @@ export function CalendarToolbar() {
           ))}
         </div>
         <button onClick={() => openNewAppointment()}
-          className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg text-white font-medium"
+          className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg text-white font-medium"
           style={{ backgroundColor: 'var(--primary)' }}>
           <Plus size={16} /> موعد جديد
         </button>

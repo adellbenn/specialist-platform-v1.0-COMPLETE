@@ -2,7 +2,7 @@
 
 import {
   Users, Calendar, FileText,
-  TrendingUp, DollarSign, Clock, AlertTriangle,
+  TrendingUp, Wallet, Clock, AlertTriangle,
   CheckCircle, BarChart3, Activity,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
@@ -94,7 +94,7 @@ export default function DashboardPageClient() {
               <div className="rounded-xl border border-border p-5 transition-all duration-150 hover:border-border-hover hover:shadow-card-hover cursor-pointer bg-background">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary">
-                    <DollarSign size={18} className="text-white" />
+                    <Wallet size={18} className="text-white" />
                   </div>
                   <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary-light text-primary">
                     {s.subscriptions.active} اشتراك

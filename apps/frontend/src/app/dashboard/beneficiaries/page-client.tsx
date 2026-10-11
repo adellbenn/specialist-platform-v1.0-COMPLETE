@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Users } from 'lucide-react';
 import { BeneficiaryQuery } from '@/services/beneficiaries.service';
@@ -15,6 +15,23 @@ import {
 } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+
+/* صف شرائح أفقي: تمرير أفقي مع إخفاء شريط التمرير وتلاشٍ خفيف عند النهاية
+   لإظهار وجود المزيد. الاتجاه RTL → النهاية على اليسار. */
+function ChipScroller({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative">
+      <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 left-0 w-6"
+        style={{ background: 'linear-gradient(to right, var(--background), transparent)' }}
+      />
+    </div>
+  );
+}
 
 export default function BeneficiariesPageClient() {
   const router = useRouter();
@@ -112,7 +129,7 @@ export default function BeneficiariesPageClient() {
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-0.5">
+        <ChipScroller>
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -127,9 +144,9 @@ export default function BeneficiariesPageClient() {
               {f.label}
             </button>
           ))}
-        </div>
+        </ChipScroller>
 
-        <div className="flex gap-2 overflow-x-auto pb-0.5">
+        <ChipScroller>
           {CASE_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -144,7 +161,7 @@ export default function BeneficiariesPageClient() {
               {f.label}
             </button>
           ))}
-        </div>
+        </ChipScroller>
       </div>
 
       {/* skeleton للشبكة فقط — الترويسة والمرشّحات أعلاه تبقى ظاهرة */}
