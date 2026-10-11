@@ -439,7 +439,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0" style={{ backgroundColor: 'var(--overlay)' }} onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute right-0 top-0 h-full z-50 flex">
+          <aside className="absolute right-0 top-0 h-full z-50 flex w-[280px] max-w-[85vw] shadow-xl">
             <Sidebar />
           </aside>
         </div>
@@ -449,7 +449,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Bar */}
         <header
-          className="flex items-center flex-shrink-0 px-6 border-b relative"
+          className="flex items-center flex-shrink-0 px-3 sm:px-6 border-b relative"
           style={{
             backgroundColor: 'var(--navbar-bg)',
             borderColor: 'var(--navbar-border)',
@@ -459,7 +459,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
 
           {/* ─── LEFT: 25% — Sidebar toggle + Page title ─── */}
-          <div className="flex items-center gap-4" style={{ width: '25%', minWidth: 0 }}>
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 w-auto lg:w-1/4">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
@@ -487,7 +487,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* ─── RIGHT: 30% — Theme + Notifications + | + User ─── */}
-          <div className="flex items-center justify-end gap-5" style={{ width: '30%', minWidth: 0 }}>
+          <div className="flex items-center justify-end gap-2 sm:gap-5 ms-auto min-w-0 w-auto lg:w-[30%]">
             {/* Monitoring badge */}
             {isAdmin && !isSuperAdmin && (
               <div className="hidden md:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border flex-shrink-0 border-warning/30 bg-warning-light text-warning">
@@ -583,7 +583,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ backgroundColor: 'var(--background)' }}>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6" style={{ backgroundColor: 'var(--background)' }}>
           {routeBlocked ? (
             (permissionStatus === 'error' || permissionStatus === 'revoked') ? (
               /* مسار الفشل/الإبطال: لا نعرض أبدًا children — السلطة مفقودة، فالتركيب رفض افتراضي، لكن يبقى أمام المستخدم مخرج قابل للتعافي. */

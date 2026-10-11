@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const sizeClasses: Record<DialogSize, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-4xl',
 };
 
 const FOCUSABLE =
@@ -99,7 +99,7 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
       dir="rtl"
       role="presentation"
     >
@@ -123,7 +123,7 @@ export function Dialog({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
-          'relative flex flex-col w-full animate-slide-up rounded-2xl border',
+          'relative flex flex-col w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] animate-slide-up rounded-2xl border',
           'shadow-modal outline-none',
           sizeClasses[size],
           compact ? 'p-3' : 'p-5',
@@ -131,7 +131,6 @@ export function Dialog({
         style={{
           backgroundColor: 'var(--surface-modal)',
           borderColor: 'var(--surface-border)',
-          maxHeight: 'min(90vh, var(--dialog-max-height))',
         }}
       >
         {showCloseButton && (
@@ -139,7 +138,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="إغلاق الحوار"
-            className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-lg text-text-muted transition-colors hover:text-text-primary hover:bg-surface-muted"
+            className="absolute top-3 left-3 w-11 h-11 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-text-muted transition-colors hover:text-text-primary hover:bg-surface-muted"
           >
             <X size={16} />
           </button>

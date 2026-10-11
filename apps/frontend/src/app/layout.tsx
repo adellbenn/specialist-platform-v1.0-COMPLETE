@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Cairo } from 'next/font/google';
 import { Providers } from './providers';
 import './globals.css';
@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: 'منصة إدارة أدوار الأخصائيين',
   description: 'نظام إدارة المراكز والعيادات النفسية والتربوية والتأهيلية',
   icons: { icon: '/favicon.ico' },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

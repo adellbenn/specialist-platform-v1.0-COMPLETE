@@ -165,7 +165,7 @@ export function DataTable<T extends BaseRow>({
 
       <div className="overflow-hidden rounded-xl border border-surface-border">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-0 text-right">
+          <table className="w-full min-w-[640px] lg:min-w-0 text-right">
             <thead className="bg-surface-background-secondary">
               <tr>
                 {columns.map((col) => (
@@ -187,7 +187,7 @@ export function DataTable<T extends BaseRow>({
                         <button
                           type="button"
                           onClick={() => toggleSort(col.key)}
-                          className="text-text-token-muted hover:text-text-token-primary transition-colors"
+                          className="inline-flex items-center justify-center min-h-10 min-w-10 -my-2 sm:min-h-0 sm:min-w-0 sm:my-0 text-text-token-muted hover:text-text-token-primary transition-colors"
                           aria-label={`فرز حسب ${col.header}`}
                         >
                           {sortKey === col.key ? (
@@ -277,7 +277,7 @@ export function DataTable<T extends BaseRow>({
       </div>
 
       {showPagination && !loading && totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 pt-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="text-xs text-text-token-muted">
             صفحة {safePage} من {totalPages}
           </span>
