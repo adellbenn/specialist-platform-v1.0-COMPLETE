@@ -1,7 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import Cookies from 'js-cookie';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+/* قاعدة الـAPI: تفاديًا لتجاوز وكيل نفس الأصل، تُستخدم قيمة NEXT_PUBLIC_API_URL
+   فقط إذا كانت مسارًا نسبيًا؛ وإلا نرجع إلى '/api/v1' النسبي (same-origin). */
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL =
+  configuredApiUrl && configuredApiUrl.startsWith('/') ? configuredApiUrl : '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -101,7 +105,7 @@ apiClient.interceptors.response.use(
         const newAccessToken = data.data.accessToken;
         const rotatedRefreshToken = data.data.refreshToken;
 
-        const secure = process.env.NODE_ENV === 'production';
+        const secure = typeof window !== 'undefined' && window.location.protocol === 'https:';
         Cookies.set('accessToken', newAccessToken, { expires: 1, sameSite: 'lax', secure, path: '/' });
         if (rotatedRefreshToken) {
           Cookies.set('refreshToken', rotatedRefreshToken, {

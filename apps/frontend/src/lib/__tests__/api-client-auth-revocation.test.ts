@@ -53,6 +53,7 @@ const rejectWith = (status: number, data?: unknown): any => ({
 
 let href: string;
 let pathname: string;
+let protocol: string;
 beforeEach(() => {
   interceptors.response.length = 0;
   vi.resetModules();
@@ -61,11 +62,13 @@ beforeEach(() => {
   mockedAxiosPost.mockReset();
   href = '/dashboard';
   pathname = '/dashboard';
+  protocol = 'http:';
   Object.defineProperty(window, 'location', {
     value: {
       get href() { return href; },
       set href(v: string) { href = v; },
       get pathname() { return pathname; },
+      get protocol() { return protocol; },
     },
     writable: true, configurable: true,
   });
@@ -117,7 +120,8 @@ describe('api-client: إبطال السلطة عند فشل المصادقة', (
     expect(href).toBe('/dashboard');
   });
 
-  it('تجديد ناجح يحفظ accessToken و refreshToken الجديدين بنفس خيارات الكوكيز', async () => {
+  it('تجديد ناجح على http يحفظ التوكنات بخيارات الكوكيز مع secure=false', async () => {
+    protocol = 'http:';
     const { interceptor } = await loadWithHandler();
     getCookie('refresh-token');
     mockedCookies.set.mockClear();
@@ -127,12 +131,30 @@ describe('api-client: إبطال السلطة عند فشل المصادقة', (
 
     await interceptor(rejectWith(401));
 
-    const secure = process.env.NODE_ENV === 'production';
     expect(mockedCookies.set).toHaveBeenCalledWith('accessToken', 'new-access', {
-      expires: 1, sameSite: 'lax', secure, path: '/',
+      expires: 1, sameSite: 'lax', secure: false, path: '/',
     });
     expect(mockedCookies.set).toHaveBeenCalledWith('refreshToken', 'rotated-refresh', {
-      expires: 7, sameSite: 'lax', secure, path: '/',
+      expires: 7, sameSite: 'lax', secure: false, path: '/',
+    });
+  });
+
+  it('تجديد ناجح على https يحفظ التوكنات بخيارات الكوكيز مع secure=true', async () => {
+    protocol = 'https:';
+    const { interceptor } = await loadWithHandler();
+    getCookie('refresh-token');
+    mockedCookies.set.mockClear();
+    mockedAxiosPost.mockResolvedValue({
+      data: { data: { accessToken: 'new-access', refreshToken: 'rotated-refresh' } },
+    } as never);
+
+    await interceptor(rejectWith(401));
+
+    expect(mockedCookies.set).toHaveBeenCalledWith('accessToken', 'new-access', {
+      expires: 1, sameSite: 'lax', secure: true, path: '/',
+    });
+    expect(mockedCookies.set).toHaveBeenCalledWith('refreshToken', 'rotated-refresh', {
+      expires: 7, sameSite: 'lax', secure: true, path: '/',
     });
   });
 

@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState>()(
           const { accessToken, refreshToken, user } = data.data;
 
           // حفظ التوكنات في Cookies
-          const secure = process.env.NODE_ENV === 'production';
+          const secure = typeof window !== 'undefined' && window.location.protocol === 'https:';
           Cookies.set('accessToken', accessToken, { expires: 1, sameSite: 'lax', secure, path: '/' });
           Cookies.set('refreshToken', refreshToken, { expires: 7, sameSite: 'lax', secure, path: '/' });
 
