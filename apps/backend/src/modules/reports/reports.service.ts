@@ -153,11 +153,38 @@ export class ReportsService {
       }
     }
 
-    Object.assign(report, {
-      ...dto,
-      periodFrom: dto.periodFrom ? new Date(dto.periodFrom) : report.periodFrom,
-      periodTo: dto.periodTo ? new Date(dto.periodTo) : report.periodTo,
-    });
+    // التحقق من ملكية المعرفات لنفس المركز قبل الحفظ
+    if (dto.beneficiaryId) {
+      const beneficiary = await this.beneficiaryRepo.findOne({
+        where: { id: dto.beneficiaryId, tenantId },
+      });
+      if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+    }
+    const specialistId = (dto as UpdateReportDto & { specialistId?: string }).specialistId;
+    if (specialistId) {
+      const specialist = await this.userRepo.findOne({
+        where: { id: specialistId, tenantId, role: UserRole.SPECIALIST },
+      });
+      if (!specialist) throw new BadRequestException('الأخصائي غير موجود في هذا المركز');
+    }
+
+    // قائمة صريحة بالحقول القابلة للتعديل (منع الإسناد الجماعي)
+    const updates: Partial<Report> = {};
+    if (dto.beneficiaryId !== undefined) updates.beneficiaryId = dto.beneficiaryId;
+    if (specialistId !== undefined) updates.specialistId = specialistId;
+    if (dto.type !== undefined) updates.type = dto.type;
+    if (dto.title !== undefined) updates.title = dto.title;
+    if (dto.content !== undefined) updates.content = dto.content;
+    if (dto.recommendations !== undefined) updates.recommendations = dto.recommendations;
+    if (dto.sharedWithBeneficiary !== undefined)
+      updates.sharedWithBeneficiary = dto.sharedWithBeneficiary;
+    if (dto.status !== undefined) updates.status = dto.status;
+    if (dto.periodFrom !== undefined)
+      updates.periodFrom = dto.periodFrom ? new Date(dto.periodFrom) : report.periodFrom;
+    if (dto.periodTo !== undefined)
+      updates.periodTo = dto.periodTo ? new Date(dto.periodTo) : report.periodTo;
+
+    Object.assign(report, updates);
 
     await this.reportRepo.save(report);
     return this.findOne(id, tenantId);

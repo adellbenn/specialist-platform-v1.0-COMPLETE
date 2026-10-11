@@ -12,6 +12,7 @@ describe('ReportsService', () => {
   let service: ReportsService;
   let reportRepo: jest.Mocked<Repository<Report>>;
   let beneficiaryRepo: jest.Mocked<Repository<Beneficiary>>;
+  let userRepo: jest.Mocked<Repository<User>>;
   let notifications: { createSafe: jest.Mock; broadcastSafe: jest.Mock };
 
   const tenantId = 'tenant-1';
@@ -101,6 +102,7 @@ describe('ReportsService', () => {
     service = module.get(ReportsService);
     reportRepo = module.get(getRepositoryToken(Report));
     beneficiaryRepo = module.get(getRepositoryToken(Beneficiary));
+    userRepo = module.get(getRepositoryToken(User));
     notifications = module.get(NotificationsService);
   });
 
@@ -343,6 +345,80 @@ describe('ReportsService', () => {
       await expect(
         service.update('rpt-1', { title: 'Test' } as any, tenantId, specUser),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject a beneficiary from another tenant', async () => {
+      reportRepo.findOne.mockResolvedValueOnce(makeReport());
+      beneficiaryRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.update(
+          'rpt-1',
+          { beneficiaryId: 'ben-other-tenant' } as any,
+          tenantId,
+          makeUser(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-other-tenant', tenantId },
+      });
+      expect(reportRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should reject a specialist from another tenant', async () => {
+      reportRepo.findOne.mockResolvedValueOnce(makeReport());
+      userRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.update(
+          'rpt-1',
+          { specialistId: 'spec-other-tenant' } as any,
+          tenantId,
+          makeUser(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'spec-other-tenant', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(reportRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should accept a valid beneficiary and specialist within the tenant', async () => {
+      reportRepo.findOne
+        .mockResolvedValueOnce(makeReport())
+        .mockResolvedValueOnce(makeReport());
+      beneficiaryRepo.findOne.mockResolvedValueOnce(makeBeneficiary());
+      userRepo.findOne.mockResolvedValueOnce(makeUser(UserRole.SPECIALIST));
+      reportRepo.save.mockResolvedValue(makeReport());
+
+      await service.update(
+        'rpt-1',
+        { beneficiaryId: 'ben-1', specialistId: 'spec-1' } as any,
+        tenantId,
+        makeUser(),
+      );
+      expect(beneficiaryRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'ben-1', tenantId },
+      });
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'spec-1', tenantId, role: UserRole.SPECIALIST },
+      });
+      expect(reportRepo.save).toHaveBeenCalled();
+    });
+
+    it('should not mass-assign non-whitelisted fields', async () => {
+      const report = makeReport();
+      reportRepo.findOne.mockResolvedValueOnce(report).mockResolvedValueOnce(report);
+      reportRepo.save.mockResolvedValue(report);
+
+      await service.update(
+        'rpt-1',
+        { title: 'Updated', id: 'hacker-id', approvedById: 'hacker' } as any,
+        tenantId,
+        makeUser(),
+      );
+      expect(report.id).toBe('rpt-1');
+      expect(report.title).toBe('Updated');
     });
   });
 

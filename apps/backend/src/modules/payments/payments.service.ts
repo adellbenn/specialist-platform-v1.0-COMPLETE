@@ -98,6 +98,14 @@ export class PaymentsService {
     });
     if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
 
+    // التحقق من أن الباقة تنتمي إلى نفس المركز
+    if (dto.packageId) {
+      const pkg = await this.packageRepo.findOne({
+        where: { id: dto.packageId, tenantId },
+      });
+      if (!pkg) throw new BadRequestException('الباقة غير موجودة في هذا المركز');
+    }
+
     // التحقق من عدم وجود اشتراك نشط للمستفيد
     const existing = await this.subscriptionRepo.findOne({
       where: {
@@ -212,6 +220,16 @@ export class PaymentsService {
       where: { id: dto.beneficiaryId, tenantId },
     });
     if (!beneficiary) throw new BadRequestException('المستفيد غير موجود في هذا المركز');
+
+    // التحقق من أن الاشتراك ينتمي إلى نفس المركز ونفس المستفيد
+    if (dto.subscriptionId) {
+      const subscription = await this.subscriptionRepo.findOne({
+        where: { id: dto.subscriptionId, tenantId, beneficiaryId: dto.beneficiaryId },
+      });
+      if (!subscription) {
+        throw new BadRequestException('الاشتراك غير موجود في هذا المركز للمستفيد المحدد');
+      }
+    }
 
     const invoiceNumber = await this.generateInvoiceNumber(tenantId);
     const total = Number(dto.amount) - Number(dto.discount ?? 0) + Number(dto.tax ?? 0);

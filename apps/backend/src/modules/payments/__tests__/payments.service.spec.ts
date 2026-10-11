@@ -207,6 +207,10 @@ describe('PaymentsService', () => {
   });
 
   describe('createSubscription', () => {
+    beforeEach(() => {
+      packageRepo.findOne.mockResolvedValue(makePackage());
+    });
+
     it('should create a subscription', async () => {
       beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
       subscriptionRepo.findOne.mockResolvedValueOnce(null);
@@ -313,6 +317,54 @@ describe('PaymentsService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
       expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should reject a package that does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      packageRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.createSubscription(
+          {
+            beneficiaryId: 'ben-1',
+            packageId: 'pkg-other-tenant',
+            sessionsCount: 12,
+            amountPaid: 500,
+            startDate: '2025-01-01',
+            expiryDate: '2025-04-01',
+          } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(subscriptionRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should scope the package lookup to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      subscriptionRepo.findOne.mockResolvedValueOnce(null);
+      subscriptionRepo.create.mockReturnValue(makeSubscription());
+      subscriptionRepo.save.mockResolvedValue(makeSubscription());
+      subscriptionRepo.findOne.mockResolvedValueOnce(makeSubscription());
+      invoiceRepo.count.mockResolvedValue(0);
+      invoiceRepo.create.mockReturnValue(makeInvoice());
+      invoiceRepo.save.mockResolvedValue(makeInvoice());
+
+      await service.createSubscription(
+        {
+          beneficiaryId: 'ben-1',
+          packageId: 'pkg-1',
+          sessionsCount: 12,
+          amountPaid: 500,
+          startDate: '2025-01-01',
+          expiryDate: '2025-04-01',
+        } as any,
+        tenantId,
+        'user-1',
+      );
+      expect(packageRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'pkg-1', tenantId },
+      });
     });
 
     it('should throw ConflictException if active subscription exists', async () => {
@@ -498,6 +550,56 @@ describe('PaymentsService', () => {
         service.createInvoice({ amount: 500 } as any, tenantId, 'user-1'),
       ).rejects.toThrow(BadRequestException);
       expect(beneficiaryRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should reject a subscription that does not belong to the tenant', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      subscriptionRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.createInvoice(
+          { beneficiaryId: 'ben-1', subscriptionId: 'sub-other-tenant', amount: 500 } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(invoiceRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should reject a subscription that belongs to another beneficiary', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      subscriptionRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.createInvoice(
+          { beneficiaryId: 'ben-1', subscriptionId: 'sub-of-other-ben', amount: 500 } as any,
+          tenantId,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(subscriptionRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'sub-of-other-ben', tenantId, beneficiaryId: 'ben-1' },
+      });
+      expect(invoiceRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should accept a subscription that belongs to the tenant and beneficiary', async () => {
+      beneficiaryRepo.findOne.mockResolvedValue(makeBeneficiary());
+      subscriptionRepo.findOne.mockResolvedValueOnce(
+        makeSubscription({ id: 'sub-1', beneficiaryId: 'ben-1' }),
+      );
+      invoiceRepo.count.mockResolvedValue(0);
+      invoiceRepo.create.mockReturnValue(makeInvoice());
+      invoiceRepo.save.mockResolvedValue(makeInvoice());
+      invoiceRepo.findOne.mockResolvedValue(makeInvoice());
+
+      const result = await service.createInvoice(
+        { beneficiaryId: 'ben-1', subscriptionId: 'sub-1', amount: 500 } as any,
+        tenantId,
+        'user-1',
+      );
+      expect(result).toBeDefined();
+      expect(invoiceRepo.save).toHaveBeenCalled();
     });
 
     it('should set paidAt if status is PAID', async () => {
