@@ -168,7 +168,7 @@ export default function EditReportPage() {
               error={errors.title?.message}
               {...register('title')}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="من تاريخ" type="date" {...register('periodFrom')} />
               <Input label="إلى تاريخ" type="date" {...register('periodTo')} />
             </div>
@@ -212,16 +212,16 @@ export default function EditReportPage() {
           />
         </Card>
 
-        <div className="flex justify-end gap-3 pb-4">
+        <div className="flex flex-wrap justify-end gap-3 pb-4">
           <button type="button" onClick={() => router.back()}
-            className="px-5 py-2.5 text-sm border rounded-lg"
+            className="w-full sm:w-auto px-5 py-2.5 text-sm border rounded-lg"
             style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-secondary)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
             إلغاء
           </button>
           <button type="submit" disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition"
             style={{ backgroundColor: 'var(--primary)', opacity: saving ? 0.65 : 1 }}>
             {saving
               ? <><Loader2 size={15} className="animate-spin" /> جاري الحفظ...</>

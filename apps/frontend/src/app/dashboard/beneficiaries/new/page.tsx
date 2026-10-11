@@ -149,11 +149,11 @@ export default function NewBeneficiaryPage() {
           </div>
         </Card>
 
-        <div className="flex items-center justify-end gap-3 pb-4">
+        <div className="flex flex-wrap items-center justify-end gap-3 pb-4">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-5 py-2.5 text-sm border rounded-lg transition"
+            className="w-full sm:w-auto px-5 py-2.5 text-sm border rounded-lg transition"
             style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
           >
             {t('common.cancel')}
@@ -161,7 +161,7 @@ export default function NewBeneficiaryPage() {
           <button
             type="submit"
             disabled={saving || !isDirty}
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
             style={{ backgroundColor: saving || !isDirty ? 'var(--primary-300)' : 'var(--primary)' }}
           >
             {saving ? (

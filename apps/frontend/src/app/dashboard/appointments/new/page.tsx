@@ -167,11 +167,11 @@ export default function NewAppointmentPage() {
           </div>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
             إلغاء
           </Button>
-          <Button type="submit" icon={Save} loading={saving}>
+          <Button type="submit" icon={Save} loading={saving} className="w-full sm:w-auto">
             حفظ الموعد
           </Button>
         </div>

@@ -34,7 +34,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={id}
           rows={4}
           className={cn(
-            'input rounded-lg resize-none',
+            'input rounded-lg resize-none max-sm:text-base max-sm:min-h-11',
             error && 'input-error',
             className,
           )}

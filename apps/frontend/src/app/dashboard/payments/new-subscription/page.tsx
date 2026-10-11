@@ -129,10 +129,10 @@ export default function NewSubscriptionPage() {
                 <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                   placeholder="بحث عن مستفيد..."
-                  className="w-full text-sm border pr-9 px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border pr-9 px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
               <select value={selectedBeneficiary} onChange={(e) => setSelectedBeneficiary(e.target.value)}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
                 <option value="">اختر مستفيد...</option>
                 {filteredBeneficiaries.map((b) => (
                   <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
@@ -143,7 +143,7 @@ export default function NewSubscriptionPage() {
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>الباقة *</label>
               <select value={selectedPackage} onChange={(e) => onPackageChange(e.target.value)}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
                 <option value="">اختر باقة...</option>
                 {packages.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -153,37 +153,37 @@ export default function NewSubscriptionPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>عدد الجلسات *</label>
                 <input type="number" value={sessionsCount} onChange={(e) => setSessionsCount(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>المبلغ المدفوع *</label>
                 <input type="number" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>تاريخ البداية *</label>
                 <input type="date" value={startDate} onChange={(e) => onStartDateChange(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>تاريخ الانتهاء *</label>
                 <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex flex-wrap gap-2 justify-end pt-2">
               <button onClick={() => router.push('/dashboard/payments')}
-                className="text-sm border px-4 py-2 rounded-2xl hover:bg-[var(--surface)] transition" style={{ borderColor: 'var(--border)' }}>إلغاء</button>
+                className="w-full sm:w-auto text-sm border px-4 py-2 rounded-2xl hover:bg-[var(--surface)] transition" style={{ borderColor: 'var(--border)' }}>إلغاء</button>
               <button onClick={handleSubmit} disabled={saving}
-                className="text-sm text-white px-4 py-2 rounded-2xl hover:brightness-90 transition disabled:opacity-50" style={{ backgroundColor: 'var(--primary)' }}>
+                className="w-full sm:w-auto text-sm text-white px-4 py-2 rounded-2xl hover:brightness-90 transition disabled:opacity-50" style={{ backgroundColor: 'var(--primary)' }}>
                 {saving ? 'جاري الإنشاء...' : 'إنشاء الاشتراك'}
               </button>
             </div>

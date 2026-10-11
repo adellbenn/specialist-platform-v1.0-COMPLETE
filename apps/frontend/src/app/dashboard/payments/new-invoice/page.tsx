@@ -92,10 +92,10 @@ export default function NewInvoicePage() {
                 <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                   placeholder="بحث عن مستفيد..."
-                  className="w-full text-sm border pr-9 px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border pr-9 px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
               <select value={selectedBeneficiary} onChange={(e) => setSelectedBeneficiary(e.target.value)}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
                 <option value="">اختر مستفيد...</option>
                 {filteredBeneficiaries.map((b) => (
                   <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
@@ -106,26 +106,26 @@ export default function NewInvoicePage() {
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>المبلغ *</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>الخصم</label>
                 <input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>الضريبة</label>
                 <input type="number" value={tax} onChange={(e) => setTax(e.target.value)}
-                  className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                  className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>طريقة الدفع</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }}>
                 <option value="">اختر طريقة الدفع...</option>
                 <option value="cash">نقداً</option>
                 <option value="card">بطاقة</option>
@@ -141,14 +141,14 @@ export default function NewInvoicePage() {
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>ملاحظات</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-                className="w-full text-sm border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
+                className="w-full text-base sm:text-sm max-sm:min-h-11 border px-3 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" style={{ borderColor: 'var(--border)' }} />
             </div>
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex flex-wrap gap-2 justify-end pt-2">
               <button onClick={() => router.push('/dashboard/payments')}
-                className="text-sm border px-4 py-2 rounded-2xl hover:bg-[var(--surface)] transition" style={{ borderColor: 'var(--border)' }}>إلغاء</button>
+                className="w-full sm:w-auto text-sm border px-4 py-2 rounded-2xl hover:bg-[var(--surface)] transition" style={{ borderColor: 'var(--border)' }}>إلغاء</button>
               <button onClick={handleSubmit} disabled={saving}
-                className="text-sm text-white px-4 py-2 rounded-2xl hover:brightness-90 transition disabled:opacity-50" style={{ backgroundColor: 'var(--primary)' }}>
+                className="w-full sm:w-auto text-sm text-white px-4 py-2 rounded-2xl hover:brightness-90 transition disabled:opacity-50" style={{ backgroundColor: 'var(--primary)' }}>
                 {saving ? 'جاري الإنشاء...' : 'إنشاء الفاتورة'}
               </button>
             </div>

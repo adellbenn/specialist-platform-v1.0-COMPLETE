@@ -224,11 +224,11 @@ export default function EditBeneficiaryPage() {
             <Textarea placeholder={t('beneficiaries.notes_placeholder')} {...register('notes')} />
           </Card>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-5 py-2.5 text-sm border rounded-lg transition"
+              className="w-full sm:w-auto px-5 py-2.5 text-sm border rounded-lg transition"
               style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
             >
               {t('common.cancel')}
@@ -236,7 +236,7 @@ export default function EditBeneficiaryPage() {
             <button
               type="submit"
               disabled={loading || !isDirty}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
+              className="w-full sm:w-auto justify-center flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
               style={{ backgroundColor: loading || !isDirty ? 'var(--primary-300)' : 'var(--primary)' }}
             >
               {loading ? (
@@ -281,10 +281,10 @@ export default function EditBeneficiaryPage() {
             />
           </Card>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <button
               onClick={() => router.back()}
-              className="px-5 py-2.5 text-sm border rounded-lg transition"
+              className="w-full sm:w-auto px-5 py-2.5 text-sm border rounded-lg transition"
               style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
             >
               {t('common.cancel')}
@@ -292,7 +292,7 @@ export default function EditBeneficiaryPage() {
             <button
               onClick={saveFile}
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
+              className="w-full sm:w-auto justify-center flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition disabled:opacity-50"
               style={{ backgroundColor: loading ? 'var(--primary-300)' : 'var(--primary)' }}
             >
               {loading ? (

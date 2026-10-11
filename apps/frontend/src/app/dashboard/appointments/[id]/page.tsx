@@ -300,9 +300,9 @@ export default function AppointmentDetailPage() {
               value={sessionForm.nextSessionPlan}
               onChange={(e) => setSessionForm((p) => ({ ...p, nextSessionPlan: e.target.value }))} />
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-border">
-              <Button variant="outline" onClick={() => setShowCompleteForm(false)}>إلغاء</Button>
-              <Button icon={Save} loading={saving} onClick={handleComplete}>حفظ الجلسة</Button>
+            <div className="flex flex-wrap justify-end gap-3 pt-2 border-t border-border">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowCompleteForm(false)}>إلغاء</Button>
+              <Button icon={Save} loading={saving} onClick={handleComplete} className="w-full sm:w-auto">حفظ الجلسة</Button>
             </div>
           </div>
         </Card>

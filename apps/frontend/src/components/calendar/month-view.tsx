@@ -41,7 +41,7 @@ export function MonthView({ currentDate, byDay, onDayClick, onAppointmentClick }
       <div className="grid grid-cols-7">
         {calendarDays.map((cell, idx) => {
           if (!cell.date) {
-            return <div key={`e-${idx}`} className="min-h-[100px]" style={{ borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }} />;
+            return <div key={`e-${idx}`} className="min-h-[76px] sm:min-h-[100px]" style={{ borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }} />;
           }
           const dayAppts = byDay[cell.date] ?? [];
           const isToday = cell.date === todayStr;
@@ -57,7 +57,7 @@ export function MonthView({ currentDate, byDay, onDayClick, onAppointmentClick }
                   onDayClick(cell.date!);
                 }
               }}
-              className="min-h-[100px] p-1.5 cursor-pointer transition hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              className="min-h-[76px] sm:min-h-[100px] p-1.5 cursor-pointer transition hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
               style={{ borderBottom: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }}>
               <div className={cn('w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full mb-1', isToday && 'text-white')}
                 style={{ backgroundColor: isToday ? 'var(--primary)' : 'transparent', color: isToday ? '#fff' : 'var(--text-primary)' }}>
