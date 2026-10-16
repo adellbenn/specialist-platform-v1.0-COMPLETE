@@ -38,8 +38,12 @@ export const validationSchema = Joi.object({
   DB_USERNAME: Joi.string().default('postgres'),
   DB_PASSWORD: Joi.when('NODE_ENV', {
     is: 'production',
-    then: Joi.required().messages({
-      'any.required': 'DB_PASSWORD is required in production',
+    then: Joi.when('DB_TYPE', {
+      is: 'sqlite',
+      then: Joi.string().allow('', null).optional(),
+      otherwise: Joi.required().messages({
+        'any.required': 'DB_PASSWORD is required in production',
+      }),
     }),
     otherwise: Joi.string().allow('', null).optional(),
   }),
