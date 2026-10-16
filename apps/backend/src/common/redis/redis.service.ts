@@ -8,6 +8,7 @@ export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private isConnected = false;
+  private hasConnectedOnce = false;
 
   constructor(
     private configService: ConfigService,
@@ -25,15 +26,23 @@ export class RedisService implements OnModuleDestroy {
         keyPrefix: this.configService.get<string>('redis.keyPrefix', 'sp:'),
         maxRetriesPerRequest: 3,
         retryStrategy(times: number) {
-          if (times > 3) return null;
-          return Math.min(times * 200, 2000);
+          return Math.min(times * 200, 5000);
         },
         lazyConnect: true,
       });
 
       this.client.on('connect', () => {
         this.isConnected = true;
-        this.logger.log('Redis connected');
+      });
+
+      this.client.on('ready', () => {
+        this.isConnected = true;
+        if (this.hasConnectedOnce) {
+          this.logger.log('Redis reconnected');
+        } else {
+          this.logger.log('Redis connected');
+          this.hasConnectedOnce = true;
+        }
       });
 
       this.client.on('error', (err) => {

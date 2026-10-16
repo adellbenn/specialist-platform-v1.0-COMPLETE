@@ -1,16 +1,35 @@
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../redis.service';
 
+const mockHandlers: Record<string, (...args: any[]) => void> = {};
+interface MockRedisClient {
+  on: jest.Mock;
+  connect: jest.Mock;
+  get: jest.Mock;
+  set: jest.Mock;
+  del: jest.Mock;
+  scan: jest.Mock;
+  quit: jest.Mock;
+}
+const mockClient: MockRedisClient = {
+  on: jest.fn((event: string, handler: (...args: any[]) => void): MockRedisClient => {
+    mockHandlers[event] = handler;
+    return mockClient;
+  }),
+  connect: jest.fn().mockResolvedValue(undefined),
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  scan: jest.fn(),
+  quit: jest.fn(),
+};
+let mockConstructorOptions: any;
+
 jest.mock('ioredis', () => {
-  const Redis = jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-    connect: jest.fn().mockResolvedValue(undefined),
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    scan: jest.fn(),
-    quit: jest.fn(),
-  }));
+  const Redis = jest.fn().mockImplementation((opts: any) => {
+    mockConstructorOptions = opts;
+    return mockClient;
+  });
   return { __esModule: true, default: Redis };
 });
 
@@ -36,6 +55,8 @@ describe('RedisService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.keys(mockHandlers).forEach((key) => delete mockHandlers[key]);
+    mockConstructorOptions = undefined;
     configService = mockConfig();
     metricsService = {
       recordHit: jest.fn(),
@@ -56,6 +77,46 @@ describe('RedisService', () => {
     it('returns false when disconnected', () => {
       (service as any).isConnected = false;
       expect(service.isAvailable()).toBe(false);
+    });
+  });
+
+  describe('retryStrategy', () => {
+    it('never returns null and increases up to a 5000ms cap', () => {
+      const strategy = mockConstructorOptions.retryStrategy;
+      expect(typeof strategy).toBe('function');
+      expect(strategy(1)).toBe(200);
+      expect(strategy(2)).toBe(400);
+      expect(strategy(10)).toBe(2000);
+      expect(strategy(25)).toBe(5000);
+      expect(strategy(1000)).toBe(5000);
+
+      let previous = -1;
+      for (let times = 1; times <= 50; times++) {
+        const delay = strategy(times);
+        expect(delay).not.toBeNull();
+        expect(delay).toBeGreaterThanOrEqual(previous);
+        expect(delay).toBeLessThanOrEqual(5000);
+        previous = delay;
+      }
+    });
+  });
+
+  describe('reconnection', () => {
+    it('recovers the status flag after a ready event', () => {
+      (service as any).isConnected = false;
+      expect(service.isAvailable()).toBe(false);
+
+      mockHandlers['ready']!();
+
+      expect(service.isAvailable()).toBe(true);
+    });
+
+    it('drops the flag on close and recovers once ready fires again', () => {
+      mockHandlers['close']!();
+      expect(service.isAvailable()).toBe(false);
+
+      mockHandlers['ready']!();
+      expect(service.isAvailable()).toBe(true);
     });
   });
 
