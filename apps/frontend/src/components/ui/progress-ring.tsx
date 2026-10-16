@@ -14,6 +14,10 @@ export interface ProgressRingProps {
   className?: string;
   trackClassName?: string;
   indicatorClassName?: string;
+  /** لون المسار الدائري (افتراضيًا متغيّر السمات) */
+  trackColor?: string;
+  /** لون مؤشّر التقدّم (افتراضيًا اللون الأساسي) */
+  indicatorColor?: string;
   'aria-label'?: string;
 }
 
@@ -30,6 +34,8 @@ export function ProgressRing({
   className,
   trackClassName,
   indicatorClassName,
+  trackColor = 'var(--surface-border-strong)',
+  indicatorColor = 'var(--primary)',
   'aria-label': ariaLabel,
 }: ProgressRingProps) {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
@@ -55,7 +61,7 @@ export function ProgressRing({
           r={radius}
           fill="none"
           strokeWidth={strokeWidth}
-          stroke="var(--surface-border-strong)"
+          stroke={trackColor}
           className={trackClassName}
         />
         <circle
@@ -65,7 +71,7 @@ export function ProgressRing({
           fill="none"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          stroke="var(--primary)"
+          stroke={indicatorColor}
           className={cn('transition-[stroke-dashoffset] duration-500 ease-out', indicatorClassName)}
           strokeDasharray={circumference}
           strokeDashoffset={offset}

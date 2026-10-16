@@ -112,7 +112,7 @@ export function GlobalSearch() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="بحث... (Ctrl+K)"
-          className="w-full h-10 pr-10 pl-9 text-sm border rounded-[12px] transition-all duration-200 outline-none"
+          className="w-full h-10 pr-10 pl-9 text-sm border rounded-full transition-all duration-200 outline-none"
           style={{
             borderColor: 'var(--border)',
             backgroundColor: 'var(--surface)',

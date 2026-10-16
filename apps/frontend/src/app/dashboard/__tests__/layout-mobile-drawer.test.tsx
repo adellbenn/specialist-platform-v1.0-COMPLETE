@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -68,21 +68,22 @@ describe('dashboard layout: درج التنقّل للجوال', () => {
     /* انتظار التركيب (mounted) بعد التأثير */
     await screen.findByText('سالم م');
 
-    /* رابط فريد يظهر في الشريط الجانبي فقط (وليس عنوان الصفحة) */
-    const linksBefore = screen.getAllByText('المستفيدون').length;
-    expect(linksBefore).toBe(1);
+    /* الدرج مغلق مبدئيًا */
+    expect(screen.queryByTestId('mobile-nav-drawer')).toBeNull();
 
-    /* زر فتح درج الجوال (lg:hidden) */
+    /* زر فتح درج الجوال (lg:hidden) في الشريط العلوي */
     const hamburger = container.querySelector('button[class*="lg:hidden"]') as HTMLElement;
     expect(hamburger).not.toBeNull();
 
     fireEvent.click(hamburger);
-    expect(screen.getAllByText('المستفيدون').length).toBe(2);
+
+    /* الرابط يظهر الآن داخل الدرج */
+    const drawer = await screen.findByTestId('mobile-nav-drawer');
+    expect(within(drawer).getAllByText('المستفيدون').length).toBe(1);
 
     /* النقر على رابط داخل الدرج يغلق الدرج */
-    const links = screen.getAllByText('المستفيدون');
-    fireEvent.click(links[links.length - 1]);
+    fireEvent.click(within(drawer).getAllByText('المستفيدون')[0]);
 
-    await waitFor(() => expect(screen.getAllByText('المستفيدون').length).toBe(1));
+    await waitFor(() => expect(screen.queryByTestId('mobile-nav-drawer')).toBeNull());
   });
 });

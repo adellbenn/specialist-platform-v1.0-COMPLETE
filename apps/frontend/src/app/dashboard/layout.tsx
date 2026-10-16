@@ -14,6 +14,8 @@ import { useAuthStore } from '@/store/auth.store';
 import { usePermissionsStore } from '@/store/permissions.store';
 import { usePermissions } from '@/hooks/use-permissions';
 import { resolveRoutePolicy } from '@/lib/route-policy';
+import { isBottomNavHidden, BOTTOM_NAV_LIMIT } from '@/lib/bottom-nav';
+import { cn } from '@/lib/utils';
 import { GlobalSearch } from '@/components/shared/global-search';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import { ThemeSync } from '@/components/ui/theme-sync';
@@ -370,8 +372,17 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     }))
     .filter((section) => section.items.length > 0);
 
+  /* أول 4 مسارات مسموحة للدور من نفس القائمة المُفلترة — لا مسار غير قابل للفتح. */
+  const bottomNavItems = visibleSections
+    .flatMap((section) => section.items)
+    .slice(0, BOTTOM_NAV_LIMIT);
+  const showBottomNav = !isBottomNavHidden(pathname);
+
   const Sidebar = () => (
-    <div className="flex flex-col h-full w-full" style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}>
+    <div
+      className="flex flex-col h-full w-full rounded-2xl overflow-hidden backdrop-blur-xl"
+      style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)', boxShadow: 'var(--card-default-shadow)' }}
+    >
       <div className="flex items-center gap-3 px-5 h-16 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
           <Building2 size={18} className="text-white" />
@@ -385,11 +396,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+      <nav data-testid="sidebar-nav" className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
         {visibleSections.map((section, idx) => (
           <div key={idx}>
             {section.title && (
-              <p className="px-3 pb-1 text-xs font-medium tracking-wider" style={{ color: 'var(--sidebar-text-muted)' }}>
+              <p className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider opacity-70" style={{ color: 'var(--sidebar-text-muted)' }}>
                 {locale === 'en' ? section.titleEn : section.title}
               </p>
             )}
@@ -402,15 +413,16 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-200"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200"
                     style={{
                       backgroundColor: isActive ? 'var(--primary)' : 'transparent',
                       color: isActive ? '#fff' : 'var(--sidebar-text-muted)',
+                      boxShadow: isActive ? 'var(--primary-shadow-sm, 0 4px 14px rgba(31,181,168,0.35))' : 'none',
                     }}
                     onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-text)'; } }}
                     onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text-muted)'; } }}
                   >
-                    <Icon size={18} />
+                    <Icon size={18} strokeWidth={isActive ? 2.25 : 1.75} />
                     <span>{locale === 'en' ? item.labelEn : item.label}</span>
                   </Link>
                 );
@@ -422,6 +434,47 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  /* شريط التنقّل السفلي للجوال: أول 4 مسارات مسموحة + «المزيد» يفتح الدرج. */
+  const BottomNav = () => (
+    <nav
+      data-testid="mobile-bottom-nav"
+      aria-label="تنقّل الجوال"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t backdrop-blur-xl"
+      style={{
+        backgroundColor: 'var(--navbar-bg)',
+        borderColor: 'var(--navbar-border)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      <div className="flex items-stretch justify-around px-1">
+        {bottomNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors"
+              style={{ color: isActive ? 'var(--primary)' : 'var(--text-muted)' }}
+            >
+              <Icon size={20} strokeWidth={isActive ? 2.25 : 1.75} />
+              <span className="max-w-full truncate">{locale === 'en' ? item.labelEn : item.label}</span>
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <Menu size={20} strokeWidth={1.75} />
+          <span>المزيد</span>
+        </button>
+      </div>
+    </nav>
+  );
+
   if (!mounted) return null;
 
   return (
@@ -430,16 +483,16 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
       {/* Desktop Sidebar */}
       {!sidebarCollapsed && (
-        <aside className="hidden lg:flex flex-shrink-0 w-[280px]">
+        <aside className="hidden lg:flex flex-shrink-0 w-[280px] p-3">
           <Sidebar />
         </aside>
       )}
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden" data-testid="mobile-nav-drawer">
           <div className="absolute inset-0" style={{ backgroundColor: 'var(--overlay)' }} onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute right-0 top-0 h-full z-50 flex w-[280px] max-w-[85vw] shadow-xl">
+          <aside className="absolute right-0 top-0 h-full z-50 flex w-[280px] max-w-[85vw] p-3">
             <Sidebar />
           </aside>
         </div>
@@ -449,7 +502,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Bar */}
         <header
-          className="flex items-center flex-shrink-0 px-3 sm:px-6 border-b relative"
+          className="flex items-center flex-shrink-0 px-3 sm:px-6 border-b relative backdrop-blur-xl"
           style={{
             backgroundColor: 'var(--navbar-bg)',
             borderColor: 'var(--navbar-border)',
@@ -462,14 +515,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 sm:gap-4 min-w-0 w-auto lg:w-1/4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
+              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
               style={{ color: 'var(--text-secondary)' }}
             >
               <Menu size={20} />
             </button>
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
+              className="hidden lg:flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
               style={{ color: 'var(--text-secondary)' }}
             >
               <Menu size={20} />
@@ -497,13 +550,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Theme toggle */}
-            <div className="flex items-center justify-center w-10 h-10 rounded-[10px] flex-shrink-0">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0">
               <ThemeSwitcher variant="icon" />
             </div>
 
             {/* Notifications */}
             <Link href="/dashboard/notifications" aria-label="الإشعارات"
-              className="flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
+              className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
               style={{ color: 'var(--text-secondary)' }}>
               <span className="relative">
                 <Bell size={20} />
@@ -518,10 +571,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             <div ref={userMenuRef} className="relative flex-shrink-0">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 h-10 rounded-[10px] px-2 transition-all duration-200 hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 ring-primary/30"
+                className="flex items-center gap-3 h-10 rounded-full px-2 transition-all duration-200 hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 ring-primary/30"
                 style={{ color: 'var(--text-primary)' }}
               >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 bg-primary text-white shadow-xs">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-primary text-white shadow-xs">
                   {user?.firstName?.[0]}
                 </div>
                 <div className="hidden lg:block text-right">
@@ -583,7 +636,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6" style={{ backgroundColor: 'var(--background)' }}>
+        <main
+          className={cn('flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6', showBottomNav && 'pb-24 lg:pb-6')}
+          style={{ backgroundColor: 'var(--background)' }}
+        >
           {routeBlocked ? (
             (permissionStatus === 'error' || permissionStatus === 'revoked') ? (
               /* مسار الفشل/الإبطال: لا نعرض أبدًا children — السلطة مفقودة، فالتركيب رفض افتراضي، لكن يبقى أمام المستخدم مخرج قابل للتعافي. */
@@ -616,6 +672,9 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             children
           )}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        {showBottomNav && <BottomNav />}
       </div>
     </div>
   );
