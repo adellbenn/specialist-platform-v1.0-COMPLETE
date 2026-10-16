@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
-import type { LucideIcon } from 'lucide-react';
+import { ArrowRight, type LucideIcon } from 'lucide-react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
@@ -11,6 +11,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: LucideIcon;
   /** أيقونة في نهاية الزر */
   trailingIcon?: ReactNode;
+  /** يعرض سهمًا دائريًا في نهاية الزر (ينعكس تلقائيًا في RTL) */
+  arrow?: boolean;
   /** عرض كامل داخل الحاوية */
   fullWidth?: boolean;
   /** حجم الزر */
@@ -40,13 +42,13 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, size = 'md', variant = 'primary', icon: Icon, trailingIcon, fullWidth, loading, disabled, children, ...props }, ref) => {
+  ({ className, size = 'md', variant = 'primary', icon: Icon, trailingIcon, arrow, fullWidth, loading, disabled, children, ...props }, ref) => {
     return (
       <button
         ref={ref}
         type={props.type ?? 'button'}
         className={cn(
-          'btn inline-flex items-center justify-center rounded-lg font-medium text-small gap-2',
+          'btn group inline-flex items-center justify-center rounded-full font-medium text-small gap-2',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           'transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
           variantClasses[variant],
@@ -63,7 +65,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           <>
             {Icon && <Icon size={size === 'lg' ? 20 : 16} aria-hidden="true" />}
             {children}
-            {trailingIcon}
+            {arrow ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'inline-flex items-center justify-center rounded-full',
+                  'transition-transform duration-200 group-hover:translate-x-0.5',
+                  size === 'lg' ? 'w-6 h-6' : 'w-5 h-5',
+                )}
+                style={{ backgroundColor: 'color-mix(in srgb, currentColor 18%, transparent)' }}
+              >
+                <ArrowRight size={size === 'lg' ? 15 : 13} className="deco-flip" />
+              </span>
+            ) : (
+              trailingIcon
+            )}
           </>
         )}
       </button>

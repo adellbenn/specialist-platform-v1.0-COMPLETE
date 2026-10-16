@@ -123,7 +123,7 @@ export function Dialog({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
-          'relative flex flex-col w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] animate-slide-up rounded-2xl border',
+          'relative flex flex-col w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] animate-slide-up rounded-2xl border backdrop-blur-xl',
           'shadow-modal outline-none',
           sizeClasses[size],
           compact ? 'p-3' : 'p-5',

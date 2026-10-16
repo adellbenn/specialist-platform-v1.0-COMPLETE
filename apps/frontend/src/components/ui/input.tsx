@@ -34,7 +34,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           id={id}
           className={cn(
-            'input rounded-lg max-sm:text-base max-sm:min-h-11',
+            'input max-sm:text-base max-sm:min-h-11',
             error && 'input-error',
             className,
           )}

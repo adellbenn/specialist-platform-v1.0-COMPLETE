@@ -44,7 +44,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={id}
             className={cn(
-              'input rounded-lg appearance-none max-sm:text-base max-sm:min-h-11',
+              'input appearance-none max-sm:text-base max-sm:min-h-11',
               error && 'input-error',
               className,
             )}
