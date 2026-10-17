@@ -463,10 +463,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     <nav
       data-testid="mobile-bottom-nav"
       aria-label="تنقّل الجوال"
-      className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t backdrop-blur-xl"
+      className="lg:hidden fixed bottom-3 inset-x-3 z-30 rounded-2xl overflow-hidden border backdrop-blur-xl"
       style={{
         backgroundColor: 'var(--navbar-bg)',
         borderColor: 'var(--navbar-border)',
+        boxShadow: 'var(--card-default-shadow)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
@@ -526,11 +527,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="relative z-0 flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Bar — z-30 يرفع الترويسة (وكل قوائمها المنسدلة) فوق بطاقات المحتوى
-            الزجاجية التي تُنشئ سياقات تكديس بسبب backdrop-filter. */}
+            الزجاجية التي تُنشئ سياقات تكديس بسبب backdrop-filter.
+            الشريط زجاجي عائم بأسلوب الشريط الجانبي: هوامش تُبقي فجوة مرئية
+            (12px) عن الشريط الجانبي وحواف الشاشة، وحواف مدوّرة وظل ناعم. */}
         <header
-          className="relative z-30 flex items-center flex-shrink-0 px-3 sm:px-4 lg:px-6 backdrop-blur-xl"
+          className="relative z-30 flex items-center flex-shrink-0 m-3 mb-0 rounded-2xl backdrop-blur-xl px-3 sm:px-4"
           style={{
             backgroundColor: 'var(--navbar-bg)',
+            boxShadow: 'var(--card-default-shadow)',
             height: '72px',
           }}
         >
@@ -661,9 +665,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content — px-3 يوازي هوامش الترويسة الخارجية لتصطف حوافهما،
+            وpt-4/lg:pt-6 يمنح فجوة رأسية 16–24px بين الترويسة والمحتوى. */}
         <main
-          className={cn('flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6', showBottomNav && 'pb-24 lg:pb-6')}
+          className={cn('flex-1 overflow-y-auto px-3 pt-4 pb-3 lg:pt-6 lg:pb-6', showBottomNav && 'pb-24 lg:pb-6')}
           style={{ backgroundColor: 'var(--background)' }}
         >
           {routeBlocked ? (

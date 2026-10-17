@@ -135,4 +135,14 @@ describe('شريط التنقّل السفلي للجوال', () => {
     fireEvent.click(within(nav).getByText('المزيد'));
     expect(await screen.findByTestId('mobile-nav-drawer')).toBeInTheDocument();
   });
+
+  it('الشريط يطفو بهوامش جانبية وحواف مدوّرة ولا يلامس حواف الشاشة', async () => {
+    renderShell();
+    const nav = await screen.findByTestId('mobile-bottom-nav');
+
+    expect(nav.className).toContain('inset-x-3');
+    expect(nav.className).toContain('bottom-3');
+    expect(nav.className).toContain('rounded-2xl');
+    expect(nav.className).not.toContain('inset-x-0');
+  });
 });

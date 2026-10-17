@@ -91,4 +91,27 @@ describe('dashboard layout: طبقات الترويسة ومكان زر المظ
     const panel = await screen.findByTestId('user-menu-panel');
     expect(panel.className).toContain('z-50');
   });
+
+  it('الترويسة شريط زجاجي عائم مُدوّر يحمل هوامش تفصله عن المحتوى', () => {
+    const { container } = render(
+      <DashboardLayout>
+        <div data-testid="child" />
+      </DashboardLayout>,
+    );
+
+    const header = container.querySelector('header') as HTMLElement;
+    expect(header).not.toBeNull();
+
+    /* الطبقة ونوع السطح الزجاجي المطلوبان للحفاظ على تكديس القوائم المنسدلة */
+    expect(header.className).toContain('z-30');
+    expect(header.className).toContain('rounded-2xl');
+    expect(header.className).toContain('backdrop-blur-xl');
+    expect(header.className).toContain('m-3');
+
+    /* المحتوى يبقي فجوة رأسية ويوازي هوامش الترويسة الجانبية */
+    const main = container.querySelector('main') as HTMLElement;
+    expect(main).not.toBeNull();
+    expect(main.className).toContain('px-3');
+    expect(main.className).toContain('pt-4');
+  });
 });

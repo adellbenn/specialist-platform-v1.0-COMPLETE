@@ -21,17 +21,24 @@ const dateTimeFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
   hour: '2-digit', minute: '2-digit', hour12: true,
 });
 
+/**
+ * يزيل علامات الاتجاه الخفيّة (RLM/LRM والمعزولات) التي يُدرجها `ar-DZ` بين
+ * أجزاء التاريخ. إبقاء العلامات يجعل خوارزمية Bidi تعامل كل رقم كشرحة منفصلة،
+ * فتُعاد ترتيبها بصريًا إلى YYYY/MM/DD. إزالتها تُبقي الترتيب المضمّن DD/MM/YYYY.
+ */
+const stripBidiMarks = (value: string): string => value.replace(/[\u200E\u200F\u2066-\u2069]/g, '');
+
 /** تنسيق رقم بالأرقام اللاتينية وفق لغة التطبيق */
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(APP_LOCALE, options).format(value);
 }
 
 export function formatDate(date: string | Date): string {
-  return dateFormatter.format(new Date(date));
+  return stripBidiMarks(dateFormatter.format(new Date(date)));
 }
 
 export function formatDateTime(date: string | Date): string {
-  return dateTimeFormatter.format(new Date(date));
+  return stripBidiMarks(dateTimeFormatter.format(new Date(date)));
 }
 
 /** تنسيق تاريخ بخيارات مخصّصة وفق لغة التطبيق */
