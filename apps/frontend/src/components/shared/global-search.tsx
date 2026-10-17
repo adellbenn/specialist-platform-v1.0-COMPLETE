@@ -103,7 +103,7 @@ export function GlobalSearch() {
   const clear = () => { setQuery(''); setResults([]); setOpen(false); };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full" data-testid="global-search">
       <div className="relative">
         <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
         <input

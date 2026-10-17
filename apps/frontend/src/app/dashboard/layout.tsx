@@ -481,9 +481,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden" dir={dir} style={{ backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
       <ThemeSync />
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar — pe-0 يلغي الفاصل بين لوح الشريط الجانبي والترويسة
+          (خصائص منطقية: صحيحة في RTL وLTR) فلا يظهر خط/فراغ بينهما. */}
       {!sidebarCollapsed && (
-        <aside className="hidden lg:flex flex-shrink-0 w-[280px] p-3">
+        <aside className="hidden lg:flex flex-shrink-0 w-[280px] py-3 ps-3 pe-0">
           <Sidebar />
         </aside>
       )}
@@ -499,20 +500,20 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Bar */}
+      <div className="relative z-0 flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Bar — z-30 يرفع الترويسة (وكل قوائمها المنسدلة) فوق بطاقات المحتوى
+            الزجاجية التي تُنشئ سياقات تكديس بسبب backdrop-filter. */}
         <header
-          className="flex items-center flex-shrink-0 px-3 sm:px-6 border-b relative backdrop-blur-xl"
+          className="relative z-30 flex items-center flex-shrink-0 px-3 sm:px-4 lg:px-6 backdrop-blur-xl"
           style={{
             backgroundColor: 'var(--navbar-bg)',
-            borderColor: 'var(--navbar-border)',
             height: '72px',
           }}
         >
 
 
-          {/* ─── LEFT: 25% — Sidebar toggle + Page title ─── */}
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0 w-auto lg:w-1/4">
+          {/* ─── LEFT — Sidebar toggle + Page title ─── */}
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:bg-[var(--surface)] flex-shrink-0"
@@ -532,15 +533,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             </h1>
           </div>
 
-          {/* ─── CENTER: 45% — Search bar ─── */}
-          <div className="hidden lg:flex items-center justify-center" style={{ width: '45%' }}>
-            <div style={{ width: 'min(420px, 100%)' }}>
+          {/* ─── CENTER — Search bar (flex-1 يتقلّص فلا يتداخل مع أزرار الترويسة) ─── */}
+          <div className="hidden lg:flex flex-1 items-center justify-center min-w-0 px-4">
+            <div className="w-full max-w-[420px]">
               <GlobalSearch />
             </div>
           </div>
 
-          {/* ─── RIGHT: 30% — Theme + Notifications + | + User ─── */}
-          <div className="flex items-center justify-end gap-2 sm:gap-5 ms-auto min-w-0 w-auto lg:w-[30%]">
+          {/* ─── RIGHT — Header actions: notifications + theme + user ─── */}
+          <div data-testid="header-actions" className="flex items-center justify-end gap-2 sm:gap-5 ms-auto flex-shrink-0">
             {/* Monitoring badge */}
             {isAdmin && !isSuperAdmin && (
               <div className="hidden md:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border flex-shrink-0 border-warning/30 bg-warning-light text-warning">
@@ -548,11 +549,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <span>{t('sidebar.monitoring_badge')}</span>
               </div>
             )}
-
-            {/* Theme toggle */}
-            <div className="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0">
-              <ThemeSwitcher variant="icon" />
-            </div>
 
             {/* Notifications */}
             <Link href="/dashboard/notifications" aria-label="الإشعارات"
@@ -563,6 +559,11 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-danger" />
               </span>
             </Link>
+
+            {/* Theme toggle — ضمن مجموعة أزرار الترويسة بجانب جرس الإشعارات (خارج حقل البحث) */}
+            <div className="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0">
+              <ThemeSwitcher variant="icon" />
+            </div>
 
             {/* Vertical Divider */}
             <div className="w-px h-8 flex-shrink-0" style={{ backgroundColor: 'var(--border)' }} />
@@ -587,6 +588,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
               {/* Dropdown */}
               {userMenuOpen && (
                 <div
+                  data-testid="user-menu-panel"
                   className="absolute left-0 top-full mt-2 w-64 rounded-[12px] border shadow-lg z-50 overflow-hidden animate-fade-in"
                   style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border)' }}
                 >
