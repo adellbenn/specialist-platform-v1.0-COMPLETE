@@ -644,9 +644,11 @@ export interface PermissionGroup {
 }
 
 export interface RoleStats {
-  totalRoles: number;
-  activeRoles: number;
-  systemRoles: number;
+  total: number;
+  active: number;
+  archived: number;
+  system: number;
+  withPermissions: number;
 }
 
 // ═══════════════════════════════════════════
@@ -679,7 +681,7 @@ export interface AuditLog {
   id: string;
   tenantId: string;
   userId: string | null;
-  user?: { id: string; firstName: string; lastName: string } | null;
+  user?: { id: string; firstName: string; lastName: string; email?: string } | null;
   action: AuditAction;
   entityType: string;
   entityId: string | null;

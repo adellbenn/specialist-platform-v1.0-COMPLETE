@@ -10,6 +10,10 @@ import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn, formatDateTime } from '@/lib/utils';
+import { getAuditActionLabel, getActorLabel, getAuditEntityLabel } from '@/lib/audit-labels';
+
+const ACTION_OPTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
+const ENTITY_OPTIONS = ['Role', 'PermissionGroup', 'UserPermission', 'Auth'];
 
 export default function AuditPage() {
   useRouteGuard({ anyRole: ['super_admin', 'center_manager'], redirectTo: '/dashboard' });
@@ -37,30 +41,19 @@ export default function AuditPage() {
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const filtered = logs.filter((l) =>
-    !search || l.user?.name?.includes(search) || l.details?.includes(search) || l.entityId?.includes(search),
+    !search ||
+    getActorLabel(l.user).includes(search) ||
+    l.user?.email?.includes(search) ||
+    l.description?.includes(search) ||
+    l.entityId?.includes(search),
   );
 
   const getActionColor = (action: string) => {
-    if (action?.startsWith('create')) return 'var(--success)';
-    if (action?.startsWith('delete')) return 'var(--danger)';
-    if (action?.startsWith('update')) return 'var(--warning)';
+    const a = action?.toUpperCase();
+    if (a === 'CREATE') return 'var(--success)';
+    if (a === 'DELETE') return 'var(--danger)';
+    if (a === 'UPDATE') return 'var(--warning)';
     return 'var(--primary)';
-  };
-
-  const getActionBadge = (action: string) => {
-    switch (action) {
-      case 'create_role': return 'إنشاء دور';
-      case 'update_role': return 'تحديث دور';
-      case 'delete_role': return 'حذف دور';
-      case 'assign_permissions': return 'تعيين صلاحيات';
-      case 'bulk_assign': return 'تعيين جماعي';
-      case 'set_override': return 'تجاوز صلاحية';
-      case 'seed_done': return 'بذر صلاحيات';
-      case 'archive_role': return 'أرشفة دور';
-      case 'duplicate_role': return 'نسخ دور';
-      case 'compare_roles': return 'مقارنة أدوار';
-      default: return action;
-    }
   };
 
   if (loading) return <TableSkeleton />;
@@ -93,20 +86,17 @@ export default function AuditPage() {
           className="text-sm rounded-xl px-3 py-2 focus:outline-none"
           style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
           <option value="">كل الإجراءات</option>
-          <option value="create_role">إنشاء</option>
-          <option value="update_role">تحديث</option>
-          <option value="delete_role">حذف</option>
-          <option value="assign_permissions">تعيين صلاحيات</option>
-          <option value="set_override">تجاوز</option>
+          {ACTION_OPTIONS.map((a) => (
+            <option key={a} value={a}>{getAuditActionLabel(a)}</option>
+          ))}
         </select>
         <select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}
           className="text-sm rounded-xl px-3 py-2 focus:outline-none"
           style={{ border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--text-primary)' }}>
           <option value="">كل الكيانات</option>
-          <option value="role">دور</option>
-          <option value="permission">صلاحية</option>
-          <option value="user_permission">مستخدم</option>
-          <option value="permission_group">مجموعة</option>
+          {ENTITY_OPTIONS.map((e) => (
+            <option key={e} value={e}>{getAuditEntityLabel(e)}</option>
+          ))}
         </select>
       </div>
 
@@ -126,28 +116,24 @@ export default function AuditPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-md"
                     style={{ backgroundColor: `${getActionColor(log.action)}15`, color: getActionColor(log.action) }}>
-                    {getActionBadge(log.action)}
+                    {getAuditActionLabel(log.action)}
                   </span>
-                  {log.action === 'delete_role' && (
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>•</span>
+                  {log.entityType && (
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      • {getAuditEntityLabel(log.entityType)}
+                    </span>
                   )}
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     <User size={10} className="inline ml-1" />
-                    {log.user?.name || 'النظام'}
+                    {getActorLabel(log.user)}
                   </span>
                 </div>
                 <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                  {log.details || `${getActionBadge(log.action)} — ${log.entityType} #${log.entityId}`}
+                  {log.description || `${getAuditActionLabel(log.action)} — ${getAuditEntityLabel(log.entityType)}${log.entityId ? ` #${log.entityId.slice(0, 8)}` : ''}`}
                 </p>
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                   <Clock size={10} />
                   {formatDateTime(log.createdAt)}
-                  {log.metadata && (
-                    <>
-                      <span>•</span>
-                      {JSON.stringify(log.metadata).substring(0, 60)}
-                    </>
-                  )}
                 </p>
               </div>
             </div>

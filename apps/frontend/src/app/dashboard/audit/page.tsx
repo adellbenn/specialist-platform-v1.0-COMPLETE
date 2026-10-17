@@ -7,6 +7,7 @@ import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useRouteGuard } from '@/components/auth/route-guard';
 import { formatDateTime, cn, toDateKey } from '@/lib/utils';
+import { getAuditActionLabel } from '@/lib/audit-labels';
 
 interface AuditLogEntry {
   id:          string;
@@ -150,7 +151,7 @@ export default function AuditLogPage() {
           >
             <option value="">جميع العمليات</option>
             {ACTIONS.map((a) => (
-              <option key={a} value={a}>{a}</option>
+              <option key={a} value={a}>{getAuditActionLabel(a)}</option>
             ))}
           </select>
 
@@ -233,7 +234,7 @@ export default function AuditLogPage() {
                           'text-xs font-medium px-2 py-0.5 rounded-full',
                           ACTION_COLORS[log.action] ?? '',
                         )} style={!ACTION_COLORS[log.action] ? { backgroundColor: 'var(--surface)', color: 'var(--text-secondary)' } : undefined}>
-                          {log.action}
+                          {getAuditActionLabel(log.action)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
