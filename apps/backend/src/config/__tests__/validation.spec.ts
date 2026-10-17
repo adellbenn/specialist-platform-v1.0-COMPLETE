@@ -79,7 +79,7 @@ describe('Joi Validation Schema', () => {
         ...validEnv,
         NODE_ENV: 'production',
         DB_TYPE: 'postgres',
-        DB_PASSWORD: 'secret',
+        DB_PASSWORD: 'dummy_db_password_1234',
       };
       const result = validationSchema.validate(env, { abortEarly: false });
       expect(result.error).toBeDefined();
@@ -111,7 +111,7 @@ describe('Joi Validation Schema', () => {
       const prodEnv = {
         ...validEnv,
         NODE_ENV: 'production',
-        DB_PASSWORD: 'secret',
+        DB_PASSWORD: 'dummy_db_password_1234',
         SUPER_ADMIN_PASSWORD: 'admin_pass',
       };
       const result = validationSchema.validate(prodEnv, { abortEarly: true });

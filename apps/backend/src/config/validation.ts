@@ -10,7 +10,8 @@ import * as Joi from 'joi';
  * - NODE_ENV: required, one of development|test|production
  * - JWT secrets: required, minimum 32 characters
  * - DB: SQLite needs no credentials; PostgreSQL needs host/port/username/password/name
- * - Production-only: DB_PASSWORD and SUPER_ADMIN_PASSWORD are mandatory
+ * - Production-only: DB_PASSWORD (non-sqlite, at least 16 characters) and
+ *   SUPER_ADMIN_PASSWORD are mandatory
  */
 export const validationSchema = Joi.object({
   // ─── Application ──────────────────────────────────────────
@@ -39,12 +40,18 @@ export const validationSchema = Joi.object({
   DB_PASSWORD: Joi.when('NODE_ENV', {
     is: 'production',
     then: Joi.when('DB_TYPE', {
+      // SQLite needs no credentials, so an empty password stays valid.
       is: 'sqlite',
       then: Joi.string().allow('', null).optional(),
-      otherwise: Joi.required().messages({
+      // Any real database must not start production with a missing, empty,
+      // or weak (shorter than 16 characters) password.
+      otherwise: Joi.string().min(16).required().messages({
+        'string.min': 'DB_PASSWORD must be at least 16 characters in production',
+        'string.empty': 'DB_PASSWORD is required in production',
         'any.required': 'DB_PASSWORD is required in production',
       }),
     }),
+    // Development and test may run without a database password.
     otherwise: Joi.string().allow('', null).optional(),
   }),
   DB_NAME: Joi.string().default('specialist_platform'),
