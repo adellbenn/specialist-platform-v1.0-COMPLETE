@@ -268,6 +268,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [mounted, setMounted] = useState(false);
 
   /* ── نقطة فرض الصلاحيات الوحيدة ──
@@ -360,6 +361,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     router.push('/auth/login');
   };
 
+  /* العنصر النشط يبقى ظاهرًا داخل منطقة التمرير عند فتح اللوحة أو تغيير المسار. */
+  useEffect(() => {
+    const el = activeNavRef.current;
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [pathname]);
+
   const visibleSections = NAV_SECTIONS
     .map((section) => ({
       ...section,
@@ -383,7 +392,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       className="flex flex-col h-full w-full rounded-2xl overflow-hidden backdrop-blur-xl"
       style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)', boxShadow: 'var(--card-default-shadow)' }}
     >
-      <div className="flex items-center gap-3 px-5 h-16 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-3 px-5 h-16 flex-none" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
           <Building2 size={18} className="text-white" />
         </div>
@@ -396,7 +405,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         )}
       </div>
 
-      <nav data-testid="sidebar-nav" className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+      {/* منطقة التمرير: min-h-0 ضرورية لعمل overflow داخل عمود flex،
+          والتلاشي الناعم أعلى/أسفل يمنح حافة نظيفة تحت الترويسة. */}
+      <div className="relative flex-1 min-h-0">
+        <nav data-testid="sidebar-nav" className="h-full overflow-y-auto px-3 pt-4 pb-3 space-y-5">
         {visibleSections.map((section, idx) => (
           <div key={idx}>
             {section.title && (
@@ -412,6 +424,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    ref={isActive ? activeNavRef : undefined}
                     onClick={() => setSidebarOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200"
                     style={{
@@ -430,7 +443,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         ))}
-      </nav>
+        </nav>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-5 z-10"
+          style={{ background: 'linear-gradient(to bottom, var(--sidebar-bg), transparent)' }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-5 z-10"
+          style={{ background: 'linear-gradient(to top, var(--sidebar-bg), transparent)' }}
+        />
+      </div>
     </div>
   );
 

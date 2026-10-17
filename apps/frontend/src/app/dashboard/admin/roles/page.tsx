@@ -16,6 +16,7 @@ import { useRouteGuard } from '@/components/auth/route-guard';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/utils';
 import { Role } from '@/types';
+import { getRoleLabel } from '@/lib/role-labels';
 import { useThemeCustomizer } from '@/store/theme-customizer.store';
 
 const DEFAULT_ROLE_COLOR = useThemeCustomizer.getState().customAccentColor || '#2563EB';
@@ -160,7 +161,7 @@ export default function AdminRolesPage() {
             { label: 'إجمالي الأدوار', value: stats.total, icon: Shield, color: 'var(--primary)' },
             { label: 'نشط', value: stats.active, icon: CheckCircle, color: 'var(--success)' },
             { label: 'مؤرشف', value: stats.archived, icon: Archive, color: 'var(--warning)' },
-            { label: 'صلاحيات كل دور', value: stats.withPermissions, icon: Key, color: 'var(--info)' },
+            { label: 'أدوار لديها صلاحيات', value: stats.withPermissions, icon: Key, color: 'var(--info)' },
           ].map((s) => (
             <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
               <div className="flex items-center gap-2 mb-1.5">
@@ -224,10 +225,13 @@ export default function AdminRolesPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm"
                     style={{ backgroundColor: role.color }}>
-                    {role.name.charAt(0)}
+                    {getRoleLabel(role.name).charAt(0)}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{role.name}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{getRoleLabel(role.name)}</p>
+                    {getRoleLabel(role.name) !== role.name && (
+                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{role.name}</p>
+                    )}
                     {role.description && (
                       <p className="text-xs mt-0.5 line-clamp-1" style={{ color: 'var(--text-muted)' }}>{role.description}</p>
                     )}
@@ -315,7 +319,7 @@ export default function AdminRolesPage() {
                   <tr>
                     <th className="text-right p-2 font-semibold" style={{ color: 'var(--text-muted)' }}>الصلاحية</th>
                     {compareData.map((r: any) => (
-                      <th key={r.id} className="text-center p-2 font-semibold" style={{ color: r.color }}>{r.name}</th>
+                      <th key={r.id} className="text-center p-2 font-semibold" style={{ color: r.color }}>{getRoleLabel(r.name)}</th>
                     ))}
                   </tr>
                 </thead>

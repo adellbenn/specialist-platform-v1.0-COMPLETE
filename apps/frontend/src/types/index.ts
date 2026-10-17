@@ -1,3 +1,5 @@
+import { ROLE_LABELS as ROLE_LABEL_MAP } from '@/lib/role-labels';
+
 // ═══════════════════════════════════════════
 // BENEFICIARIES
 // ═══════════════════════════════════════════
@@ -202,15 +204,7 @@ export interface ApiError {
 // ROLE PERMISSIONS
 // ═══════════════════════════════════════════
 
-export const ROLE_LABELS: Record<UserRole, string> = {
-  super_admin: 'المدير العام',
-  center_manager: 'مدير المركز',
-  supervisor: 'المشرف',
-  specialist: 'الأخصائي',
-  receptionist: 'موظف الاستقبال',
-  accountant: 'المحاسب',
-  beneficiary: 'المستفيد',
-};
+export const ROLE_LABELS = ROLE_LABEL_MAP as Record<UserRole, string>;
 
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   super_admin: 6,

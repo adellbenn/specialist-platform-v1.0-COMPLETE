@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin.service';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { useRouteGuard } from '@/components/auth/route-guard';
+import { getRoleLabel } from '@/lib/role-labels';
 import { cn } from '@/lib/utils';
 
 export default function RoleDetailPage() {
@@ -106,11 +107,14 @@ export default function RoleDetailPage() {
         </button>
         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
           style={{ backgroundColor: role.color }}>
-          {role.name.charAt(0)}
+          {getRoleLabel(role.name).charAt(0)}
         </div>
         <div>
-          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{role.name}</h1>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{role.description || 'لا يوجد وصف'}</p>
+          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{getRoleLabel(role.name)}</h1>
+          {getRoleLabel(role.name) !== role.name && (
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{role.name}</p>
+          )}
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{role.description || 'لا يوجد وصف'}</p>
         </div>
         <div className="mr-auto flex items-center gap-2 text-sm">
           <Key size={14} style={{ color: 'var(--text-muted)' }} />
